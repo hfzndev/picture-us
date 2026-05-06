@@ -55,9 +55,17 @@ export default function EventsPage() {
     e.preventDefault();
     setCreating(true);
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert("You must be logged in to create an event.");
+      setCreating(false);
+      return;
+    }
+
     const { data: event, error } = await supabase
       .from("events")
       .insert({
+        host_id: user.id,
         name: newEvent.name,
         event_date: newEvent.event_date,
         photo_limit: newEvent.photo_limit,
@@ -66,8 +74,14 @@ export default function EventsPage() {
       .select("id, name, receptionist_token")
       .single();
 
-    if (error || !event) {
-      alert("Failed to create event. Please try again.");
+    if (error) {
+      alert(`Failed to create event: ${error.message}`);
+      setCreating(false);
+      return;
+    }
+
+    if (!event) {
+      alert("Failed to create event. No data returned.");
       setCreating(false);
       return;
     }
