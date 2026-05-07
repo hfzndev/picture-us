@@ -39,18 +39,12 @@ export default function CTA() {
           >
             Create Your Event
           </Link>
-          <Link
-            href="/admin/login"
-            className="btn-ghost no-underline min-w-[200px]"
-          >
-            Sign In
-          </Link>
         </div>
 
         {/* Early access badge */}
-        <div className="card-admin rounded-lg px-8 py-4 mt-4">
+        <div className="card-admin rounded-lg px-8 py-2 mt-4">
           <p className="text-caption text-whisper-gray">
-            &#x1F389; Free during early access &middot; Full access to all features
+            Free during early access &middot; Full access to all features
           </p>
         </div>
       </div>

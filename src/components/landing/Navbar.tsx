@@ -3,18 +3,36 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/browser";
 import { Menu, X } from "lucide-react";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+
+  const supabase = createClient();
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
     window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+
+    // Check auth state
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsSignedIn(!!user);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsSignedIn(!!session?.user);
+    });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      subscription.unsubscribe();
+    };
   }, []);
 
   return (
@@ -49,10 +67,20 @@ export default function Navbar() {
             <span className="link-text-primary">pricing</span>
             <span className="link-text-secondary">pricing</span>
           </a>
-          <Link href="/login" className="link-hover-reveal px-1 text-sm">
-            <span className="link-text-primary">sign-in</span>
-            <span className="link-text-secondary">sign-in</span>
-          </Link>
+          {isSignedIn ? (
+            <Link
+              href="/admin/events"
+              className="link-hover-reverse px-1 text-sm"
+            >
+              <span className="link-text-primary-1">enter dashboard</span>
+              <span className="link-text-secondary-1">enter dashboard</span>
+            </Link>
+          ) : (
+            <Link href="/admin/login" className="link-hover-reveal px-1 text-sm">
+              <span className="link-text-primary">sign-in</span>
+              <span className="link-text-secondary">sign-in</span>
+            </Link>
+          )}
         </div>
 
         {/* Mobile Toggle */}
@@ -91,20 +119,32 @@ export default function Navbar() {
               Pricing
             </a>
             <div className="flex flex-col gap-3 pt-3 border-t border-white/[0.06]">
-              <Link
-                href="/login"
-                className="btn-ghost text-center no-underline"
-                onClick={() => setMobileOpen(false)}
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/signup"
-                className="btn-primary text-center no-underline"
-                onClick={() => setMobileOpen(false)}
-              >
-                Get Started
-              </Link>
+              {isSignedIn ? (
+                <Link
+                  href="/admin/events"
+                  className="btn-primary text-center no-underline"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  Enter Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/admin/login"
+                    className="btn-ghost text-center no-underline"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="btn-primary text-center no-underline"
+                    onClick={() => setMobileOpen(false)}
+                  >
+                    Get Started
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
