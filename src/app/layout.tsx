@@ -1,40 +1,33 @@
 // src/app/layout.tsx
 import type { Metadata, Viewport } from "next";
-import { Nunito, Space_Mono, Caveat } from "next/font/google";
+import { Inter, Raleway } from "next/font/google";
 import "./globals.css";
 
-const nunito = Nunito({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["300", "400", "600"],
   display: "swap",
-  variable: "--font-nunito",
+  variable: "--font-inter",
 });
 
-const spaceMono = Space_Mono({
+const raleway = Raleway({
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400"],
   display: "swap",
-  variable: "--font-space-mono",
-});
-
-const caveat = Caveat({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-  variable: "--font-caveat",
+  variable: "--font-raleway",
 });
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#FEF9F0",
+  themeColor: "#000000",
 };
 
 export const metadata: Metadata = {
-  title: "Picture Us — Disposable Digital Camera",
+  title: "Picture Us — Disposable Digital Camera for Events",
   description:
-    "Capture memories at special events. Scan, snap, and share — like a disposable camera, but digital.",
+    "Capture memories at special events. A disposable digital camera experience — one-time payment, unlimited moments.",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -48,10 +41,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${nunito.variable} ${spaceMono.variable} ${caveat.variable}`}
-    >
+    <html lang="en" className={`${inter.variable} ${raleway.variable}`}>
       <body className="min-h-dvh flex flex-col antialiased">
         {children}
       </body>

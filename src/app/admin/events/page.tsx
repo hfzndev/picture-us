@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/browser";
+import Link from "next/link";
 import { Camera, QrCode, LogOut, Plus } from "lucide-react";
 import QRCode from "qrcode";
 
@@ -111,57 +112,71 @@ export default function EventsPage() {
 
   return (
     <main className="admin-screen">
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <Camera size={32} className="text-[var(--color-amber-500)]" strokeWidth={1.5} />
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-            My Events
+      {/* Header */}
+      <div className="flex items-center justify-between mb-10">
+        <Link href="/" className="flex items-center gap-3 no-underline">
+          <Camera size={28} className="text-deep-shadow" strokeWidth={1.5} />
+          <h1 className="text-xl font-semibold text-deep-shadow lowercase">
+            picture-us
           </h1>
-        </div>
-        <button onClick={handleLogout} className="btn-secondary text-sm">
-          <LogOut size={16} className="inline mr-1" /> Logout
+        </Link>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-1.5 text-sm text-whisper-gray hover:text-deep-shadow transition-colors duration-200"
+        >
+          <LogOut size={15} />
+          Logout
         </button>
       </div>
 
+      {/* Create Event Button */}
       {!showForm && (
         <button
           onClick={() => setShowForm(true)}
-          className="btn-primary mb-6"
+          className="btn-primary mb-8 w-full max-w-sm mx-auto"
         >
-          <Plus size={18} className="inline mr-1" /> Create Event
+          <Plus size={16} />
+          Create Event
         </button>
       )}
 
+      {/* Create Form */}
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-white rounded-2xl shadow-md p-6 mb-6 space-y-4">
-          <h2 className="text-lg font-semibold">New Event</h2>
+        <form
+          onSubmit={handleCreate}
+          className="card-admin mb-8 space-y-5"
+        >
+          <h2 className="text-lg font-semibold text-deep-shadow">New Event</h2>
+
           <div>
-            <label className="text-sm text-[var(--color-text-secondary)] block mb-1">
+            <label className="text-sm font-medium text-deep-shadow block mb-1.5">
               Event Name
             </label>
             <input
               type="text"
               value={newEvent.name}
               onChange={(e) => setNewEvent({ ...newEvent, name: e.target.value })}
-              className="input-base"
-              placeholder="Sarah & Tom's Wedding"
+              className="input-admin"
+              placeholder="e.g. John's Wedding"
               required
             />
           </div>
+
           <div>
-            <label className="text-sm text-[var(--color-text-secondary)] block mb-1">
+            <label className="text-sm font-medium text-deep-shadow block mb-1.5">
               Event Date
             </label>
             <input
               type="date"
               value={newEvent.event_date}
               onChange={(e) => setNewEvent({ ...newEvent, event_date: e.target.value })}
-              className="input-base"
+              className="input-admin"
               required
             />
           </div>
+
           <div>
-            <label className="text-sm text-[var(--color-text-secondary)] block mb-1">
+            <label className="text-sm font-medium text-deep-shadow block mb-1.5">
               Photos Per Guest
             </label>
             <input
@@ -172,17 +187,18 @@ export default function EventsPage() {
               onChange={(e) =>
                 setNewEvent({ ...newEvent, photo_limit: parseInt(e.target.value) || 8 })
               }
-              className="input-base"
+              className="input-admin"
             />
           </div>
-          <div className="flex gap-3">
+
+          <div className="flex gap-3 pt-2">
             <button type="submit" disabled={creating} className="btn-primary">
-              {creating ? "Creating..." : "Create Event 🎉"}
+              {creating ? "Creating..." : "Create Event"}
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="btn-secondary"
+              className="btn-ghost"
             >
               Cancel
             </button>
@@ -190,34 +206,54 @@ export default function EventsPage() {
         </form>
       )}
 
+      {/* Event List */}
       {loading ? (
-        <p className="text-[var(--color-text-muted)]">Loading...</p>
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="card-admin flex items-center justify-between animate-pulse"
+            >
+              <div className="space-y-2">
+                <div className="h-5 w-44 bg-black/5 rounded" />
+                <div className="h-4 w-28 bg-black/5 rounded" />
+              </div>
+              <div className="flex gap-2">
+                <div className="h-8 w-20 bg-black/5 rounded-full" />
+                <div className="h-8 w-16 bg-black/5 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : events.length === 0 ? (
-        <div className="text-center py-12">
-          <Camera size={48} className="text-[var(--color-text-muted)] mx-auto mb-4" strokeWidth={1.5} />
-          <p className="text-[var(--color-text-secondary)]">
+        <div className="text-center py-16">
+          <Camera
+            size={48}
+            className="text-black/15 mx-auto mb-4"
+            strokeWidth={1.5}
+          />
+          <p className="text-whisper-gray">
             No events yet. Create your first event to get started.
           </p>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="space-y-3">
           {events.map((event) => (
             <div
               key={event.id}
-              className="bg-white rounded-2xl shadow-md p-5 flex items-center justify-between"
+              className="card-admin flex items-center justify-between"
             >
               <div>
-                <h3 className="font-semibold text-[var(--color-text-primary)]">
-                  {event.name}
-                </h3>
-                <p className="text-sm text-[var(--color-text-secondary)]">
-                  {new Date(event.event_date).toLocaleDateString()} · {event.photo_limit} shots/guest
+                <h3 className="font-semibold text-deep-shadow">{event.name}</h3>
+                <p className="text-sm text-whisper-gray">
+                  {new Date(event.event_date).toLocaleDateString()} &middot;{" "}
+                  {event.photo_limit} shots/guest
                 </p>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => router.push(`/admin/gallery/${event.id}`)}
-                  className="btn-secondary text-sm"
+                  className="tab-admin"
                 >
                   Gallery
                 </button>
@@ -239,9 +275,10 @@ export default function EventsPage() {
                       qrDataUrl,
                     });
                   }}
-                  className="btn-secondary text-sm"
+                  className="tab-admin"
                 >
-                  <QrCode size={16} className="inline mr-1" /> QR
+                  <QrCode size={14} />
+                  QR
                 </button>
               </div>
             </div>
@@ -252,23 +289,26 @@ export default function EventsPage() {
       {/* QR Code Modal */}
       {qrModal && (
         <div
-          className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm"
           onClick={() => setQrModal(null)}
         >
           <div
-            className="bg-white rounded-2xl p-6 max-w-sm w-full text-center space-y-4"
+            className="bg-white rounded-2xl p-8 max-w-sm w-full text-center space-y-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="font-semibold text-lg">{qrModal.name} — Guest QR</h3>
+            <h3 className="font-semibold text-lg text-deep-shadow">
+              {qrModal.name}
+            </h3>
+            <p className="text-xs text-whisper-gray">Guest QR Code</p>
             <img
               src={qrModal.qrDataUrl}
               alt="Event QR Code"
-              className="mx-auto rounded-lg shadow-md"
+              className="mx-auto rounded-lg"
             />
-            <p className="text-xs text-[var(--color-text-muted)] break-all">
+            <p className="text-xs text-whisper-gray break-all font-mono">
               {qrModal.guestUrl}
             </p>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <a
                 href={qrModal.qrDataUrl}
                 download={`${qrModal.name}-qr.png`}
@@ -281,7 +321,7 @@ export default function EventsPage() {
                   navigator.clipboard.writeText(qrModal.receptionistUrl);
                   alert("Receptionist link copied!");
                 }}
-                className="btn-secondary block w-full text-sm"
+                className="btn-ghost block w-full text-sm"
               >
                 Copy Receptionist Link
               </button>

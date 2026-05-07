@@ -3,6 +3,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { Camera, Copy, Check } from "lucide-react";
 
 function ReceptionistContent() {
@@ -18,18 +19,15 @@ function ReceptionistContent() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Set receptionist token cookie
     if (token) {
       document.cookie = `receptionist_token=${token}; path=/; max-age=86400; SameSite=Lax`;
     }
 
-    // Load event
     if (eventId && token) {
       fetch(`/api/codes/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ eventId }),
-        // Let cookie pass naturally
       })
         .then((r) => r.json())
         .then((d) => {
@@ -57,9 +55,11 @@ function ReceptionistContent() {
         setCodesUsed((prev) => prev + 1);
         setCopied(false);
       } else {
-        setError(json.error === "INVALID_RECEPTIONIST_TOKEN" 
-          ? "Invalid or expired receptionist link. Please ask the host for a new link." 
-          : "Failed to generate code. Try again.");
+        setError(
+          json.error === "INVALID_RECEPTIONIST_TOKEN"
+            ? "Invalid or expired receptionist link. Please ask the host for a new link."
+            : "Failed to generate code. Try again."
+        );
       }
     } catch {
       setError("Network error. Check your connection.");
@@ -76,32 +76,38 @@ function ReceptionistContent() {
   };
 
   return (
-    <main className="guest-screen items-center text-center gap-8">
+    <main className="admin-screen items-center text-center gap-8 py-16">
       {/* Header */}
       <div className="flex flex-col items-center gap-2">
-        <Camera size={40} className="text-[var(--color-amber-500)]" strokeWidth={1.5} />
-        <h1 className="text-lg font-semibold text-[var(--color-text-primary)]">
+        <Link href="/" className="no-underline">
+          <Camera
+            size={36}
+            className="text-deep-shadow hover:opacity-70 transition-opacity"
+            strokeWidth={1.5}
+          />
+        </Link>
+        <h1 className="text-lg font-semibold text-deep-shadow">
           {eventName || "Event"}
         </h1>
-        <p className="text-xs text-[var(--color-text-muted)]">Receptionist Panel</p>
+        <p className="text-xs text-whisper-gray">Receptionist Panel</p>
       </div>
 
       {/* Code Card */}
       <div
-        className={`bg-white rounded-2xl shadow-lg p-8 w-full cursor-pointer transition-all ${
-          currentCode ? "hover:shadow-xl" : ""
+        className={`card-admin w-full max-w-sm mx-auto cursor-pointer transition-all duration-200 text-center ${
+          currentCode ? "hover:border-black/20 hover:shadow-md" : ""
         }`}
         onClick={copyCode}
       >
         {currentCode ? (
           <>
-            <p className="text-4xl font-bold text-[var(--color-amber-600)] font-[var(--font-mono)] tracking-wider">
+            <p className="text-4xl font-bold text-deep-shadow font-mono tracking-[0.3em]">
               {currentCode}
             </p>
-            <div className="flex items-center justify-center gap-1 mt-3 text-sm text-[var(--color-text-muted)]">
+            <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-whisper-gray">
               {copied ? (
                 <>
-                  <Check size={14} className="text-[var(--color-success)]" />
+                  <Check size={14} className="text-green-600" />
                   Copied!
                 </>
               ) : (
@@ -114,22 +120,20 @@ function ReceptionistContent() {
           </>
         ) : (
           <>
-            <p className="text-4xl font-bold text-[var(--color-text-muted)] font-[var(--font-mono)] tracking-wider opacity-30">
-              — — — — — —
+            <p className="text-4xl font-bold text-black/10 font-mono tracking-[0.3em] select-none">
+              — — &mdash; &mdash; &mdash;
             </p>
-            <p className="text-sm text-[var(--color-text-muted)] mt-3">
+            <p className="text-xs text-whisper-gray mt-3">
               Tap the button to generate a guest code
             </p>
           </>
         )}
       </div>
 
-      <p className="text-sm text-[var(--color-text-secondary)]">
-        Show this to the next guest
-      </p>
+      <p className="text-sm text-whisper-gray">Show this to the next guest</p>
 
       {error && (
-        <p className="text-sm text-[var(--color-error)]" role="alert">
+        <p className="text-sm text-red-600 max-w-xs" role="alert">
           {error}
         </p>
       )}
@@ -138,13 +142,13 @@ function ReceptionistContent() {
       <button
         onClick={generateCode}
         disabled={generating}
-        className="btn-primary w-full"
+        className="btn-primary w-full max-w-sm"
       >
         {generating ? "Generating..." : "→ Next Guest Code"}
       </button>
 
       {/* Stats */}
-      <p className="text-sm text-[var(--color-text-muted)] font-[var(--font-mono)]">
+      <p className="text-xs text-whisper-gray font-mono">
         Codes used: {codesUsed}
       </p>
     </main>
@@ -155,8 +159,24 @@ export default function ReceptionistPage() {
   return (
     <Suspense
       fallback={
-        <main className="guest-screen items-center justify-center">
-          <p className="text-[var(--color-text-muted)]">Loading...</p>
+        <main className="admin-screen items-center text-center gap-8 py-16">
+          <div className="flex flex-col items-center gap-2">
+            <Link href="/" className="no-underline">
+              <Camera
+                size={36}
+                className="text-deep-shadow"
+                strokeWidth={1.5}
+              />
+            </Link>
+            <div className="h-5 w-40 bg-black/5 rounded animate-pulse" />
+            <div className="h-3 w-24 bg-black/5 rounded animate-pulse" />
+          </div>
+          <div className="card-admin w-full max-w-sm mx-auto animate-pulse">
+            <div className="h-10 w-56 mx-auto bg-black/5 rounded" />
+            <div className="h-4 w-20 mx-auto mt-3 bg-black/5 rounded" />
+          </div>
+          <div className="h-4 w-48 mx-auto bg-black/5 rounded animate-pulse" />
+          <div className="h-12 w-full max-w-sm bg-black/5 rounded-full animate-pulse" />
         </main>
       }
     >

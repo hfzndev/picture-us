@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Camera, RefreshCw, MessageSquare, Heart } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/browser";
 import {
   generateDeviceFingerprint,
   formatCode,
@@ -489,7 +489,7 @@ export default function EventPage() {
             {/* Switch camera */}
             <button
               onClick={switchCamera}
-              className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-[var(--color-paper-canvas)]/80 backdrop-blur-sm flex items-center justify-center"
               style={{ visibility: hasMultipleCameras ? "visible" : "hidden" }}
               aria-label="Switch camera"
             >
@@ -515,7 +515,7 @@ export default function EventPage() {
             {/* Caption toggle */}
             <button
               onClick={() => setShowCaption(true)}
-              className="w-10 h-10 rounded-full bg-white/80 backdrop-blur-sm shadow-md flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-[var(--color-paper-canvas)]/80 backdrop-blur-sm flex items-center justify-center"
               aria-label="Add caption"
             >
               <MessageSquare size={18} className="text-[var(--color-text-secondary)]" />

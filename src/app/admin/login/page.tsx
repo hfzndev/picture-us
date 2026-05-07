@@ -3,7 +3,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/browser";
+import Link from "next/link";
 import { Camera } from "lucide-react";
 
 export default function LoginPage() {
@@ -20,7 +21,7 @@ export default function LoginPage() {
     const { error: loginError } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/admin/events`,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
     });
 
@@ -33,34 +34,41 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="guest-screen items-center justify-center text-center gap-6">
-      <Camera size={48} className="text-[var(--color-amber-500)]" strokeWidth={1.5} />
-      <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-        Host Login
-      </h1>
-      <p className="text-sm text-[var(--color-text-secondary)] max-w-xs">
+    <main className="admin-screen items-center justify-center text-center gap-6 py-24">
+      <Link href="/" className="no-underline">
+        <Camera
+          size={40}
+          className="text-deep-shadow hover:opacity-70 transition-opacity"
+          strokeWidth={1.5}
+        />
+      </Link>
+      <h1 className="text-2xl font-bold text-deep-shadow">Host Login</h1>
+      <p className="text-sm text-whisper-gray max-w-xs">
         Enter your email to receive a magic link. No password needed.
       </p>
 
       {sent ? (
-        <div className="bg-[var(--color-amber-50)] border border-[var(--color-amber-200)] rounded-xl p-4 max-w-xs">
-          <p className="text-sm text-[var(--color-amber-700)]">
+        <div className="card-admin max-w-xs text-center border-green-200">
+          <p className="text-sm text-deep-shadow">
             Magic link sent! Check your email and click the link to continue.
           </p>
         </div>
       ) : (
-        <form onSubmit={handleLogin} className="flex flex-col gap-4 w-full max-w-xs">
+        <form
+          onSubmit={handleLogin}
+          className="flex flex-col gap-4 w-full max-w-xs"
+        >
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="input-base"
+            className="input-admin text-center"
             required
             autoFocus
           />
           {error && (
-            <p className="text-sm text-[var(--color-error)]" role="alert">
+            <p className="text-sm text-red-600" role="alert">
               {error}
             </p>
           )}

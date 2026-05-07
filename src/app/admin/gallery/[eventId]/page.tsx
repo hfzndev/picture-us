@@ -3,7 +3,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/browser";
+import Link from "next/link";
 import { ArrowLeft, Download, MessageSquareHeart, Image as ImageIcon } from "lucide-react";
 
 interface Photo {
@@ -147,40 +148,37 @@ export default function GalleryPage() {
   return (
     <main className="admin-screen">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <button
-          onClick={() => router.push("/admin/events")}
-          className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-[var(--color-amber-50)]"
-        >
-          <ArrowLeft size={20} className="text-[var(--color-text-primary)]" />
-        </button>
-        <h1 className="text-xl font-bold text-[var(--color-text-primary)]">
-          {eventName || "Gallery"}
-        </h1>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/admin/events")}
+            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors"
+          >
+            <ArrowLeft size={20} className="text-deep-shadow" />
+          </button>
+          <h1 className="text-xl font-bold text-deep-shadow">
+            {eventName || "Gallery"}
+          </h1>
+        </div>
+        <Link href="/" className="text-sm text-whisper-gray hover:text-deep-shadow transition-colors no-underline">
+          picture-us
+        </Link>
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-8">
         <button
           onClick={() => setTab("photos")}
-          className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-            tab === "photos"
-              ? "bg-[var(--color-amber-500)] text-white"
-              : "bg-white text-[var(--color-text-secondary)] shadow-sm"
-          }`}
+          className={`tab-admin ${tab === "photos" ? "active" : ""}`}
         >
-          <ImageIcon size={16} />
+          <ImageIcon size={15} />
           Photos ({photos.length})
         </button>
         <button
           onClick={() => setTab("messages")}
-          className={`flex items-center gap-1 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-            tab === "messages"
-              ? "bg-[var(--color-amber-500)] text-white"
-              : "bg-white text-[var(--color-text-secondary)] shadow-sm"
-          }`}
+          className={`tab-admin ${tab === "messages" ? "active" : ""}`}
         >
-          <MessageSquareHeart size={16} />
+          <MessageSquareHeart size={15} />
           Messages ({messages.length})
         </button>
       </div>
@@ -191,7 +189,7 @@ export default function GalleryPage() {
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
-              className="aspect-square bg-[var(--color-amber-100)] rounded-lg animate-pulse"
+              className="aspect-square bg-black/5 rounded-lg animate-pulse"
             />
           ))}
         </div>
@@ -200,10 +198,10 @@ export default function GalleryPage() {
           <div className="text-center py-16">
             <ImageIcon
               size={48}
-              className="text-[var(--color-text-muted)] mx-auto mb-4"
+              className="text-black/15 mx-auto mb-4"
               strokeWidth={1.5}
             />
-            <p className="text-[var(--color-text-secondary)]">
+            <p className="text-whisper-gray">
               No photos yet. Guest photos will appear here in real-time.
             </p>
           </div>
@@ -212,7 +210,7 @@ export default function GalleryPage() {
             {photos.map((photo) => (
               <div
                 key={photo.id}
-                className="relative group overflow-hidden rounded-lg shadow-sm animate-fade-in-up"
+                className="relative group overflow-hidden rounded-lg bg-black/5 animate-fade-in-up"
               >
                 {photo.url ? (
                   <img
@@ -222,13 +220,13 @@ export default function GalleryPage() {
                     loading="lazy"
                   />
                 ) : (
-                  <div className="w-full aspect-square bg-[var(--color-amber-100)] flex items-center justify-center">
-                    <ImageIcon size={24} className="text-[var(--color-text-muted)]" />
+                  <div className="w-full aspect-square flex items-center justify-center">
+                    <ImageIcon size={24} className="text-black/20" />
                   </div>
                 )}
 
                 {/* Date stamp */}
-                <span className="absolute bottom-1 right-1 text-[10px] font-[var(--font-mono)] text-[var(--color-amber-500)]">
+                <span className="absolute bottom-2 right-2 text-[10px] font-mono text-white/80 bg-black/40 px-1.5 py-0.5 rounded">
                   {new Date(photo.taken_at).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
@@ -236,13 +234,13 @@ export default function GalleryPage() {
                 </span>
 
                 {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
                   <button
                     onClick={() => photo.url && downloadPhoto(photo.url)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity bg-white rounded-full p-2 shadow-lg"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white rounded-full p-2 shadow-lg"
                     aria-label="Download photo"
                   >
-                    <Download size={18} className="text-[var(--color-text-primary)]" />
+                    <Download size={16} className="text-deep-shadow" />
                   </button>
                 </div>
               </div>
@@ -253,10 +251,10 @@ export default function GalleryPage() {
         <div className="text-center py-16">
           <MessageSquareHeart
             size={48}
-            className="text-[var(--color-text-muted)] mx-auto mb-4"
+            className="text-black/15 mx-auto mb-4"
             strokeWidth={1.5}
           />
-          <p className="text-[var(--color-text-secondary)]">
+          <p className="text-whisper-gray">
             No messages yet. Messages appear here after guests finish their photo roll.
           </p>
         </div>
@@ -265,12 +263,12 @@ export default function GalleryPage() {
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className="bg-white rounded-lg shadow-sm p-4 animate-fade-in-up"
+              className="card-admin animate-fade-in-up"
             >
-              <p className="text-lg font-[var(--font-hand)] text-[var(--color-text-primary)] leading-relaxed">
+              <p className="text-base text-deep-shadow leading-relaxed">
                 {msg.body}
               </p>
-              <p className="text-xs text-[var(--color-text-muted)] font-[var(--font-mono)] mt-2">
+              <p className="text-xs text-whisper-gray font-mono mt-3">
                 {new Date(msg.created_at).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
