@@ -4,8 +4,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
-import Link from "next/link";
-import { ArrowLeft, Download, MessageSquareHeart, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Download, MessageSquareHeart, Image as ImageIcon, Archive, Trash2 } from "lucide-react";
 
 interface Photo {
   id: string;
@@ -26,14 +25,16 @@ type Tab = "photos" | "messages";
 export default function GalleryPage() {
   const params = useParams<{ eventId: string }>();
   const eventId = params.eventId;
-  const router = useRouter();
   const supabase = createClient();
+  const router = useRouter();
 
   const [tab, setTab] = useState<Tab>("photos");
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [eventName, setEventName] = useState("");
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
+  const [trashingIds, setTrashingIds] = useState<Set<string>>(new Set());
 
   // Load initial data
   useEffect(() => {
@@ -46,11 +47,12 @@ export default function GalleryPage() {
 
       if (event) setEventName(event.name);
 
-      // Load photos
+      // Load photos (only visible ones)
       const { data: photoData } = await supabase
         .from("photos")
         .select("id, storage_path, caption, taken_at")
         .eq("event_id", eventId)
+        .eq("is_visible", true)
         .order("taken_at", { ascending: false });
 
       if (photoData) {
@@ -145,24 +147,76 @@ export default function GalleryPage() {
     window.open(url, "_blank");
   };
 
+  const handleTrash = async (photoId: string) => {
+    setTrashingIds((prev) => new Set(prev).add(photoId));
+    try {
+      await fetch(`/api/photos/${photoId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isVisible: false }),
+      });
+      setPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    } catch {
+      // Silently fail
+    } finally {
+      setTrashingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(photoId);
+        return next;
+      });
+    }
+  };
+
+  const handleExportAll = async () => {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/export/photos?eventId=${eventId}`);
+      if (!res.ok) {
+        const json = await res.json();
+        alert(json.error || "Export failed. Try again.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${eventName || "event"}-photos.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("Export failed. Check your connection.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <main className="admin-screen">
-      {/* Header */}
+      {/* Back */}
+      <button
+        onClick={() => router.push(`/admin/events/${eventId}`)}
+        className="flex items-center gap-1.5 text-sm text-whisper-gray hover:text-deep-shadow transition-colors mb-6"
+      >
+        <ArrowLeft size={16} /> Back
+      </button>
+
+      {/* Page header */}
       <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold text-deep-shadow">
+          {eventName || "Gallery"}
+        </h1>
+        {tab === "photos" && photos.length > 0 && (
           <button
-            onClick={() => router.push("/admin/events")}
-            className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-black/5 transition-colors"
+            onClick={handleExportAll}
+            disabled={exporting}
+            className="btn-ghost text-sm"
           >
-            <ArrowLeft size={20} className="text-deep-shadow" />
+            <Archive size={15} />
+            {exporting ? `Zipping ${photos.length} photos...` : "Download All"}
           </button>
-          <h1 className="text-xl font-bold text-deep-shadow">
-            {eventName || "Gallery"}
-          </h1>
-        </div>
-        <Link href="/" className="text-sm text-whisper-gray hover:text-deep-shadow transition-colors no-underline">
-          picture-us
-        </Link>
+        )}
       </div>
 
       {/* Tab bar */}
@@ -234,7 +288,16 @@ export default function GalleryPage() {
                 </span>
 
                 {/* Hover overlay */}
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center">
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-200 flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => handleTrash(photo.id)}
+                    disabled={trashingIds.has(photo.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white rounded-full p-2 shadow-lg"
+                    aria-label="Move to trash"
+                    title="Trash"
+                  >
+                    <Trash2 size={16} className="text-rose-600" />
+                  </button>
                   <button
                     onClick={() => photo.url && downloadPhoto(photo.url)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white rounded-full p-2 shadow-lg"

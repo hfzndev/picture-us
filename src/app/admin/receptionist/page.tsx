@@ -2,11 +2,11 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { Camera, Copy, Check } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Camera, Copy, Check, ArrowLeft } from "lucide-react";
 
 function ReceptionistContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const eventId = searchParams.get("event") || "";
   const token = searchParams.get("token") || "";
@@ -77,19 +77,24 @@ function ReceptionistContent() {
 
   return (
     <main className="admin-screen items-center text-center gap-8 py-16">
-      {/* Header */}
-      <div className="flex flex-col items-center gap-2">
-        <Link href="/" className="no-underline">
-          <Camera
-            size={36}
-            className="text-deep-shadow hover:opacity-70 transition-opacity"
-            strokeWidth={1.5}
-          />
-        </Link>
-        <h1 className="text-lg font-semibold text-deep-shadow">
-          {eventName || "Event"}
+      {/* Back */}
+      <div className="text-left w-full max-w-sm mx-auto">
+        <button
+          onClick={() => router.push(`/admin/events/${eventId}`)}
+          className="flex items-center gap-1.5 text-sm text-whisper-gray hover:text-deep-shadow transition-colors mb-6"
+        >
+          <ArrowLeft size={16} /> Back to Events
+        </button>
+      </div>
+
+      {/* Page header */}
+      <div className="text-left w-full max-w-sm mx-auto">
+        <h1 className="text-2xl font-bold text-deep-shadow mb-1">
+          Receptionist Panel
         </h1>
-        <p className="text-xs text-whisper-gray">Receptionist Panel</p>
+        {eventName && (
+          <p className="text-sm text-whisper-gray mb-8">{eventName}</p>
+        )}
       </div>
 
       {/* Code Card */}
@@ -160,16 +165,9 @@ export default function ReceptionistPage() {
     <Suspense
       fallback={
         <main className="admin-screen items-center text-center gap-8 py-16">
-          <div className="flex flex-col items-center gap-2">
-            <Link href="/" className="no-underline">
-              <Camera
-                size={36}
-                className="text-deep-shadow"
-                strokeWidth={1.5}
-              />
-            </Link>
-            <div className="h-5 w-40 bg-black/5 rounded animate-pulse" />
-            <div className="h-3 w-24 bg-black/5 rounded animate-pulse" />
+          <div className="text-left w-full max-w-sm mx-auto">
+            <div className="h-7 w-40 bg-black/5 rounded animate-pulse" />
+            <div className="h-4 w-32 mt-1 bg-black/5 rounded animate-pulse" />
           </div>
           <div className="card-admin w-full max-w-sm mx-auto animate-pulse">
             <div className="h-10 w-56 mx-auto bg-black/5 rounded" />

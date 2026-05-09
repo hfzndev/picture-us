@@ -35,6 +35,20 @@ export async function POST(request: Request) {
 
     const supabase = createServiceClient();
 
+    // Check if event is still active
+    const { data: eventCheck } = await supabase
+      .from("events")
+      .select("is_active")
+      .eq("id", session.eventId)
+      .single();
+
+    if (eventCheck && !eventCheck.is_active) {
+      return NextResponse.json(
+        { success: false, error: "EVENT_ENDED" },
+        { status: 403 }
+      );
+    }
+
     // Check quota
     const { data: sessionData } = await supabase
       .from("sessions")

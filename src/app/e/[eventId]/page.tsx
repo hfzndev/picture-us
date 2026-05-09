@@ -247,7 +247,7 @@ export default function EventPage() {
 
     // Draw date stamp
     const stamp = formatDateStamp();
-    ctx.font = "14px 'Space Mono', monospace";
+    ctx.font = "14px 'Inter', ui-sans-serif";
     ctx.fillStyle = "#F97316";
     ctx.shadowColor = "rgba(249, 115, 22, 0.3)";
     ctx.shadowBlur = 4;
@@ -377,12 +377,12 @@ export default function EventPage() {
         <div className="flex flex-col items-center gap-8 flex-1 justify-center">
           {/* Header */}
           <div className="flex flex-col items-center gap-3 animate-fade-in-up">
-            <Camera size={48} className="text-[var(--color-amber-500)]" strokeWidth={1.5} />
-            <h1 className="text-2xl font-bold text-[var(--color-text-primary)] text-center">
+            <Camera size={48} className="text-amber-500" strokeWidth={1.5} />
+            <h1 className="text-2xl font-bold text-frost-white text-center">
               Welcome to <br />
               {eventName || "the Event"}
             </h1>
-            <p className="text-base text-[var(--color-text-secondary)]">
+            <p className="text-base text-whisper-gray">
               Ask the receptionist for your photo code
             </p>
           </div>
@@ -400,12 +400,12 @@ export default function EventPage() {
                   value={digit}
                   onChange={(e) => handleCodeDigit(i, e.target.value)}
                   onKeyDown={(e) => handleCodeKeyDown(i, e)}
-                  className={`code-input ${codeError ? "border-[var(--color-error)]" : ""}`}
+                  className={`code-input ${codeError ? "border-red-500" : ""}`}
                   aria-label={`Code digit ${i + 1} of 6`}
                   autoFocus={i === 0}
                 />
                 {i === 2 && (
-                  <span className="text-2xl font-bold text-[var(--color-text-muted)] mx-1 select-none">
+                  <span className="text-2xl font-bold text-misty-gray mx-1 select-none">
                     —
                   </span>
                 )}
@@ -414,7 +414,7 @@ export default function EventPage() {
           </div>
 
           {codeError && (
-            <p className="text-sm text-[var(--color-error)] animate-shake" role="alert">
+            <p className="text-sm text-red-500 animate-shake" role="alert">
               {codeError}
             </p>
           )}
@@ -438,12 +438,12 @@ export default function EventPage() {
                 key={i}
                 className={`w-3 h-3 rounded-full transition-all duration-200 ${
                   i < session.photoLimit - session.photosLeft
-                    ? "bg-[var(--color-amber-500)] scale-110"
-                    : "bg-[var(--color-amber-200)]"
+                    ? "bg-amber-500 scale-110"
+                    : "bg-amber-200"
                 }`}
               />
             ))}
-            <span className="text-sm font-mono text-[var(--color-text-secondary)] ml-2">
+            <span className="text-sm font-mono text-whisper-gray ml-2">
               {session ? `${getPhotosRemaining(session.photoLimit - session.photosLeft, session.photoLimit)} of ${session.photoLimit}` : ""}
             </span>
           </div>
@@ -452,7 +452,7 @@ export default function EventPage() {
           <div className="camera-viewfinder flex-1 mt-10 mb-4 relative">
             {cameraError ? (
               <div className="flex flex-col items-center justify-center h-full gap-4 p-6 text-center">
-                <Camera size={48} className="text-[var(--color-text-muted)]" strokeWidth={1.5} />
+                <Camera size={48} className="text-misty-gray" strokeWidth={1.5} />
                 <p className="text-white text-base">{cameraError}</p>
                 <button onClick={initCamera} className="btn-secondary">
                   Try Again
@@ -472,7 +472,7 @@ export default function EventPage() {
             {/* Upload error */}
             {uploadError && (
               <div className="absolute top-2 left-0 right-0 z-30 flex justify-center">
-                <span className="bg-[var(--color-error)] text-white text-xs px-3 py-1 rounded-full">
+                <span className="bg-red-500 text-white text-xs px-3 py-1 rounded-full">
                   {uploadError}
                 </span>
               </div>
@@ -480,7 +480,7 @@ export default function EventPage() {
 
             {/* Upload progress */}
             {isUploading && (
-              <div className="absolute top-0 left-0 right-0 z-30 h-1 bg-[var(--color-amber-500)] animate-pulse" />
+              <div className="absolute top-0 left-0 right-0 z-30 h-1 bg-amber-500 animate-pulse" />
             )}
           </div>
 
@@ -489,11 +489,11 @@ export default function EventPage() {
             {/* Switch camera */}
             <button
               onClick={switchCamera}
-              className="w-10 h-10 rounded-full bg-[var(--color-paper-canvas)]/80 backdrop-blur-sm flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-deep-shadow/80 backdrop-blur-sm flex items-center justify-center"
               style={{ visibility: hasMultipleCameras ? "visible" : "hidden" }}
               aria-label="Switch camera"
             >
-              <RefreshCw size={18} className="text-[var(--color-text-primary)]" />
+              <RefreshCw size={18} className="text-frost-white" />
             </button>
 
             {/* Capture button */}
@@ -502,8 +502,8 @@ export default function EventPage() {
               disabled={!cameraReady || isCapturing || isUploading}
               className="relative w-20 h-20 rounded-full flex items-center justify-center"
               style={{
-                border: "4px solid var(--color-amber-200)",
-                backgroundColor: isCapturing ? "var(--color-amber-600)" : "var(--color-amber-500)",
+                border: "4px solid #FED7AA",
+                backgroundColor: isCapturing ? "#EA580C" : "#F97316",
                 boxShadow: "0 0 60px rgba(251, 146, 60, 0.5)",
                 opacity: !cameraReady || isUploading ? 0.5 : 1,
               }}
@@ -515,10 +515,10 @@ export default function EventPage() {
             {/* Caption toggle */}
             <button
               onClick={() => setShowCaption(true)}
-              className="w-10 h-10 rounded-full bg-[var(--color-paper-canvas)]/80 backdrop-blur-sm flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-deep-shadow/80 backdrop-blur-sm flex items-center justify-center"
               aria-label="Add caption"
             >
-              <MessageSquare size={18} className="text-[var(--color-text-secondary)]" />
+              <MessageSquare size={18} className="text-whisper-gray" />
             </button>
           </div>
 
@@ -562,10 +562,10 @@ export default function EventPage() {
       {screen === "farewell" && (
         <div className="flex flex-col items-center gap-6 flex-1 justify-center animate-fade-in-up">
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-[var(--color-text-primary)]">
+            <h2 className="text-3xl font-bold text-frost-white">
               Your roll is full!
             </h2>
-            <p className="text-lg text-[var(--color-text-secondary)] mt-2">
+            <p className="text-lg text-whisper-gray mt-2">
               {session?.photoLimit || 0} memories captured
             </p>
           </div>
@@ -577,7 +577,7 @@ export default function EventPage() {
             className="guestbook-textarea"
             rows={6}
           />
-          <span className="text-xs text-[var(--color-text-muted)] -mt-4 self-end">
+          <span className="text-xs text-misty-gray -mt-4 self-end">
             {message.length}/300
           </span>
 
@@ -591,7 +591,7 @@ export default function EventPage() {
 
           <button
             onClick={() => setScreen("ended")}
-            className="text-sm text-[var(--color-text-muted)] underline"
+            className="text-sm text-misty-gray underline"
           >
             Skip for now →
           </button>
@@ -601,17 +601,17 @@ export default function EventPage() {
       {screen === "ended" && (
         <div className="flex flex-col items-center gap-6 flex-1 justify-center text-center animate-fade-in-up" onLoad={handleDone}>
           <div className="w-48 h-48 flex items-center justify-center">
-            <Heart size={80} className="text-[var(--color-amber-500)]" strokeWidth={1.5} />
+            <Heart size={80} className="text-amber-500" strokeWidth={1.5} />
           </div>
-          <h2 className="text-2xl font-bold text-[var(--color-text-primary)]">
+          <h2 className="text-2xl font-bold text-frost-white">
             Thank you for being <br />
             part of the memories!
           </h2>
-          <p className="text-base text-[var(--color-text-secondary)] max-w-xs">
+          <p className="text-base text-whisper-gray max-w-xs">
             Your photos have been saved to{" "}
             {eventName ? `${eventName}'s` : "the"} gallery.
           </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-8">
+          <p className="text-xs text-misty-gray mt-8">
             You can close this page
           </p>
         </div>

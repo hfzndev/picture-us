@@ -31,7 +31,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/admin/events");
+    router.push("/admin");
     router.refresh();
   };
 

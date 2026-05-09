@@ -53,9 +53,16 @@ export async function POST(request: Request) {
     // Get event details
     const { data: event } = await supabase
       .from("events")
-      .select("name, photo_limit")
+      .select("name, photo_limit, is_active")
       .eq("id", eventId)
       .single();
+
+    if (event && !event.is_active) {
+      return NextResponse.json(
+        { success: false, error: "EVENT_ENDED" },
+        { status: 403 }
+      );
+    }
 
     const photoLimit = event?.photo_limit || 8;
 

@@ -124,7 +124,7 @@
 /* === Base Styles === */
 html {
   font-family: var(--font-roobert);
-  background-color: var(--color-pure-white);
+  background-color: var(--color-frost-white);
   color: var(--color-frost-white);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -538,7 +538,7 @@ body {
 /* Secondary Button — ghost border, thinner */
 .btn-secondary {
   background-color: transparent;
-  color: var(--color-black);
+  color: var(--color-deep-shadow);
   border: 1px solid black;
   border-radius: var(--radius-full);
   font-weight: var(--font-weight-regular);

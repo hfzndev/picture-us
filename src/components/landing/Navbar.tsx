@@ -69,7 +69,7 @@ export default function Navbar() {
           </a>
           {isSignedIn ? (
             <Link
-              href="/admin/events"
+              href="/admin"
               className="link-hover-reverse px-1 text-sm"
             >
               <span className="link-text-primary-1">enter dashboard</span>
@@ -121,7 +121,7 @@ export default function Navbar() {
             <div className="flex flex-col gap-3 pt-3 border-t border-white/[0.06]">
               {isSignedIn ? (
                 <Link
-                  href="/admin/events"
+                  href="/admin"
                   className="btn-primary text-center no-underline"
                   onClick={() => setMobileOpen(false)}
                 >
