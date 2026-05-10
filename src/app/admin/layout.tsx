@@ -15,14 +15,10 @@ import {
   Menu,
   Trash2,
   Plus,
-  X,
-  ArrowLeft,
-  Check,
-  QrCode,
   LayoutDashboard,
   BookOpenText,
 } from "lucide-react";
-import QRCode from "qrcode";
+import { CreateEventModal } from "@/components/admin/create-event-modal";
 
 // --- Create Event Context ---
 const CreateEventCtx = createContext<{ openCreateModal: () => void }>({
@@ -78,21 +74,6 @@ export default function AdminLayout({
 
   // --- Create Event Modal State ---
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [qrModal, setQrModal] = useState<{
-    eventId: string;
-    name: string;
-    guestUrl: string;
-    receptionistUrl: string;
-    qrDataUrl: string;
-  } | null>(null);
-  const [newEvent, setNewEvent] = useState({
-    name: "",
-    event_date: "",
-    photo_limit: 8,
-    theme_color: "amber",
-  });
-  const [creating, setCreating] = useState(false);
 
   // Login page — no sidebar
   if (pathname === "/admin/login") {
@@ -163,77 +144,7 @@ export default function AdminLayout({
 
   // --- Create Event Handlers ---
   const openCreateModal = () => {
-    setNewEvent({ name: "", event_date: "", photo_limit: 8, theme_color: "amber" });
     setCreateModalOpen(true);
-    setConfirmModalOpen(false);
-    setQrModal(null);
-  };
-
-  const closeAllModals = () => {
-    setCreateModalOpen(false);
-    setConfirmModalOpen(false);
-    setQrModal(null);
-    setCreating(false);
-  };
-
-  const handleReview = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newEvent.name.trim() || !newEvent.event_date) return;
-    setCreateModalOpen(false);
-    setConfirmModalOpen(true);
-  };
-
-  const handleBackToEdit = () => {
-    setConfirmModalOpen(false);
-    setCreateModalOpen(true);
-  };
-
-  const handleConfirmCreate = async () => {
-    setCreating(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setCreating(false);
-      return;
-    }
-
-    const { data: event, error } = await supabase
-      .from("events")
-      .insert({
-        host_id: user.id,
-        name: newEvent.name,
-        event_date: newEvent.event_date,
-        photo_limit: newEvent.photo_limit,
-        theme_color: newEvent.theme_color,
-      })
-      .select("id, name, receptionist_token")
-      .single();
-
-    if (error || !event) {
-      alert(`Failed to create event: ${error?.message || "No data returned"}`);
-      setCreating(false);
-      setConfirmModalOpen(false);
-      return;
-    }
-
-    const guestUrl = `${window.location.origin}/e/${event.id}`;
-    const receptionistUrl = `${window.location.origin}/admin/receptionist?event=${event.id}&token=${event.receptionist_token}`;
-    const qrDataUrl = await QRCode.toDataURL(guestUrl, { width: 256 });
-
-    setConfirmModalOpen(false);
-    setNewEvent({ name: "", event_date: "", photo_limit: 8, theme_color: "amber" });
-    setCreating(false);
-
-    setQrModal({
-      eventId: event.id,
-      name: event.name,
-      guestUrl,
-      receptionistUrl,
-      qrDataUrl,
-    });
-
-    router.refresh();
   };
 
   return (
@@ -249,7 +160,7 @@ export default function AdminLayout({
 
         {/* Sidebar */}
         <aside
-          className={`fixed lg:sticky top-0 left-0 z-50 h-dvh w-60 bg-midnight-canvas text-frost-white flex flex-col shrink-0 transition-transform duration-300 ease-out ${
+          className={`fixed lg:sticky top-0 left-0 z-50 h-dvh w-60 border-r border-gray-200 bg-frost-white text-black flex flex-col shrink-0 transition-transform duration-300 ease-out ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           } lg:translate-x-0`}
         >
@@ -266,7 +177,7 @@ export default function AdminLayout({
 
           {/* Nav */}
           <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-            <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-misty-gray mb-2">
+            <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-misty-gray mb-2 border-gray-200 ">
               Home
             </p>
             {navItems.map((item) => {
@@ -279,8 +190,8 @@ export default function AdminLayout({
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 no-underline ${
                     active
-                      ? "bg-amber-500/15 text-amber-400"
-                      : "text-whisper-gray hover:bg-white/5 hover:text-frost-white"
+                      ? "bg-amber-500/15 text-amber-400 border-white border"
+                      : "text-black border border-white hover:border-amber-600 hover:text-amber-600"
                   }`}
                 >
                   <Icon size={18} strokeWidth={1.5} />
@@ -295,16 +206,16 @@ export default function AdminLayout({
                 openCreateModal();
                 setSidebarOpen(false);
               }}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 w-full text-left text-whisper-gray hover:bg-white/5 hover:text-frost-white"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 w-full text-left text-black hover:border-amber-600 border border-white hover:text-amber-600 cursor-pointer"
             >
               <Plus size={18} strokeWidth={1.5} />
               Create Event
             </button>
-            <div className="pt-3 mt-3 border-t border-white/10"></div>
+            <div className="pt-3 mt-3 border-t border-gray-200"></div>
 
             {/* Separator + Event Nav */}
             {selectedEventId && (
-              <div >
+              <div className="gap-1 flex flex-col" >
                 <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-misty-gray mb-2 truncate">
                   {selectedEventName ?? "Loading..."}
                 </p>
@@ -321,8 +232,8 @@ export default function AdminLayout({
                       onClick={() => setSidebarOpen(false)}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors duration-150 no-underline ${
                         active
-                          ? "bg-amber-500/15 text-amber-400"
-                          : "text-whisper-gray hover:bg-white/5 hover:text-frost-white"
+                          ? "bg-amber-500/15 text-amber-600 hover:border-amber-600 border border-transparent"
+                          : "text-black border border-white hover:border-amber-600 hover:text-amber-600"
                       }`}
                     >
                       <Icon size={18} strokeWidth={1.5} />
@@ -373,239 +284,7 @@ export default function AdminLayout({
           <div className="flex-1">{children}</div>
         </div>
 
-        {/* ───── Create Event Modal (Step 1: Form) ───── */}
-        {createModalOpen && (
-          <div
-            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm"
-            onClick={closeAllModals}
-          >
-            <form
-              onSubmit={handleReview}
-              className="bg-white rounded-2xl p-8 max-w-md w-full space-y-5 shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-deep-shadow">
-                  New Event
-                </h2>
-                <button
-                  type="button"
-                  onClick={closeAllModals}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-black/5 transition-colors"
-                >
-                  <X size={18} className="text-misty-gray" />
-                </button>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-deep-shadow block mb-1.5">
-                  Event Name
-                </label>
-                <input
-                  type="text"
-                  value={newEvent.name}
-                  onChange={(e) =>
-                    setNewEvent({ ...newEvent, name: e.target.value })
-                  }
-                  className="input-admin"
-                  placeholder="e.g. Sarah's Wedding"
-                  required
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-deep-shadow block mb-1.5">
-                  Event Date
-                </label>
-                <input
-                  type="date"
-                  value={newEvent.event_date}
-                  onChange={(e) =>
-                    setNewEvent({ ...newEvent, event_date: e.target.value })
-                  }
-                  className="input-admin"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-deep-shadow block mb-1.5">
-                  Photos Per Guest
-                </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={newEvent.photo_limit}
-                  onChange={(e) =>
-                    setNewEvent({
-                      ...newEvent,
-                      photo_limit: parseInt(e.target.value) || 8,
-                    })
-                  }
-                  className="input-admin"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={closeAllModals}
-                  className="btn-ghost"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary">
-                  Review →
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* ───── Confirmation Modal (Step 2) ───── */}
-        {confirmModalOpen && (
-          <div
-            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm"
-            onClick={closeAllModals}
-          >
-            <div
-              className="bg-white rounded-2xl p-8 max-w-md w-full space-y-5 shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-deep-shadow">
-                  Confirm Event
-                </h2>
-                <button
-                  type="button"
-                  onClick={closeAllModals}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-black/5 transition-colors"
-                >
-                  <X size={18} className="text-misty-gray" />
-                </button>
-              </div>
-
-              <p className="text-sm text-whisper-gray">
-                Review the details before creating your event:
-              </p>
-
-              <div className="bg-misty-gray/10 rounded-xl p-4 space-y-3 text-sm">
-                <div>
-                  <p className="text-xs text-misty-gray uppercase tracking-wider font-semibold">
-                    Name
-                  </p>
-                  <p className="font-semibold text-deep-shadow mt-0.5">
-                    {newEvent.name}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-misty-gray uppercase tracking-wider font-semibold">
-                    Date
-                  </p>
-                  <p className="font-semibold text-deep-shadow mt-0.5">
-                    {new Date(newEvent.event_date).toLocaleDateString(
-                      undefined,
-                      { year: "numeric", month: "long", day: "numeric" }
-                    )}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-misty-gray uppercase tracking-wider font-semibold">
-                    Photos Per Guest
-                  </p>
-                  <p className="font-semibold text-deep-shadow mt-0.5">
-                    {newEvent.photo_limit}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={handleBackToEdit}
-                  className="btn-ghost"
-                >
-                  <ArrowLeft size={15} /> Back
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmCreate}
-                  disabled={creating}
-                  className="btn-primary"
-                >
-                  {creating ? "Creating..." : "Create Event"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ───── QR Code Modal (Step 3) ───── */}
-        {qrModal && (
-          <div
-            className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm"
-            onClick={closeAllModals}
-          >
-            <div
-              className="bg-white rounded-2xl p-8 max-w-sm w-full text-center space-y-5 shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
-                <Check size={20} className="text-emerald-600" />
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-lg text-deep-shadow">
-                  {qrModal.name}
-                </h3>
-                <p className="text-xs text-whisper-gray mt-1">
-                  Event created successfully!
-                </p>
-              </div>
-
-              <p className="text-xs text-whisper-gray">Guest QR Code</p>
-              <img
-                src={qrModal.qrDataUrl}
-                alt="Event QR Code"
-                className="mx-auto rounded-lg"
-              />
-              <p className="text-xs text-whisper-gray break-all font-mono">
-                {qrModal.guestUrl}
-              </p>
-
-              <div className="space-y-2.5">
-                <a
-                  href={qrModal.qrDataUrl}
-                  download={`${qrModal.name}-qr.png`}
-                  className="btn-primary block text-center no-underline text-sm"
-                >
-                  <QrCode size={14} className="inline mr-2" />
-                  Download QR
-                </a>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(qrModal.receptionistUrl);
-                    alert("Receptionist link copied!");
-                  }}
-                  className="btn-ghost block w-full text-sm"
-                >
-                  Copy Receptionist Link
-                </button>
-                <button
-                  onClick={() => {
-                    closeAllModals();
-                    router.push(`/admin/events/${qrModal.eventId}`);
-                  }}
-                  className="btn-primary block w-full text-center text-sm no-underline"
-                >
-                  Go to Event →
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <CreateEventModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
       </div>
     </CreateEventCtx.Provider>
   );

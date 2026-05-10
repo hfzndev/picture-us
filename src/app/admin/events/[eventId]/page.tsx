@@ -16,7 +16,11 @@ import {
   Printer,
   X,
   Scissors,
+  Check,
 } from "lucide-react";
+import { EndEventModal } from "@/components/admin/end-event-modal";
+import { BatchGenerateModal } from "@/components/admin/batch-generate-modal";
+import { PrintSheetModal } from "@/components/admin/print-sheet-modal";
 
 interface EventDetail {
   id: string;
@@ -46,6 +50,7 @@ export default function EventDetailPage() {
   const [event, setEvent] = useState<EventDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [endConfirmOpen, setEndConfirmOpen] = useState(false);
 
   // --- Batch code state ---
   const [batchModalOpen, setBatchModalOpen] = useState(false);
@@ -107,7 +112,15 @@ export default function EventDetailPage() {
 
   const handleToggle = async () => {
     if (!event || toggling) return;
+
+    // Show confirmation modal only when ending the event
+    if (event.is_active && !endConfirmOpen) {
+      setEndConfirmOpen(true);
+      return;
+    }
+
     setToggling(true);
+    setEndConfirmOpen(false);
     try {
       const res = await fetch(`/api/events/${event.id}/toggle`, { method: "PATCH" });
       const json = await res.json();
@@ -189,10 +202,6 @@ export default function EventDetailPage() {
 
   return (
     <main className="admin-screen">
-      {/* Back */}
-      <button onClick={() => router.push("/admin")} className="flex items-center gap-1.5 text-sm text-whisper-gray hover:text-deep-shadow transition-colors mb-6">
-        <ArrowLeft size={16} /> Back to Events
-      </button>
 
       {loading ? (
         <div className="space-y-6">
@@ -212,7 +221,7 @@ export default function EventDetailPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-deep-shadow uppercase">{event.name}</h1>
+              <h1 className="text-2xl font-bold text-deep-shadow uppercase">dashboard of {event.name}</h1>
               <p className="text-sm text-whisper-gray mt-1">
                 {new Date(event.event_date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
               </p>
@@ -266,9 +275,9 @@ export default function EventDetailPage() {
 
           {/* Actions */}
           <div className="mb-8">
-            <h2 className="text-sm font-semibold text-whisper-gray uppercase tracking-wider mb-3">Actions</h2>
+            <h2 className="text-sm font-semibold text-whisper-gray uppercase tracking-wider mt-4 mb-3">Quick Actions</h2>
             <div className="flex flex-wrap gap-3">
-              <Link href={`/admin/gallery/${event.id}`} className="btn-ghost no-underline text-sm">
+              <Link href={`/admin/gallery/${event.id}`} className="btn-ghost rounded-lg no-underline text-sm hover:border-amber-600 hover:text-amber-600 hover:bg-amber-200">
                 <Image size={15} /> View Gallery
               </Link>
               <Link href={`/admin/receptionist?event=${event.id}`} className="btn-ghost no-underline text-sm">
@@ -332,139 +341,34 @@ export default function EventDetailPage() {
         </>
       ) : null}
 
-      {/* ───── Batch Generate Modal ───── */}
-      {batchModalOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => setBatchModalOpen(false)}
-        >
-          <div
-            className="bg-white rounded-2xl p-8 max-w-md w-full space-y-5 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-deep-shadow">
-                Batch Generate Codes
-              </h2>
-              <button
-                type="button"
-                onClick={() => setBatchModalOpen(false)}
-                className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-black/5 transition-colors"
-              >
-                <X size={18} className="text-misty-gray" />
-              </button>
-            </div>
+      {/* ───── Modals ───── */}
+      <BatchGenerateModal
+        open={batchModalOpen}
+        onOpenChange={setBatchModalOpen}
+        eventName={event?.name}
+        batchCount={batchCount}
+        setBatchCount={setBatchCount}
+        onGenerate={handleBatchGenerate}
+        loading={batchGenerating}
+      />
 
-            {event && <p className="text-sm text-whisper-gray">{event.name}</p>}
+      <EndEventModal
+        open={endConfirmOpen}
+        onOpenChange={setEndConfirmOpen}
+        onConfirm={handleToggle}
+        loading={toggling}
+      />
 
-            <div>
-              <label className="text-sm font-medium text-deep-shadow block mb-1.5">
-                Number of codes (1-500)
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={500}
-                value={batchCount}
-                onChange={(e) => setBatchCount(parseInt(e.target.value) || 50)}
-                className="input-admin"
-                autoFocus
-              />
-              <p className="text-xs text-misty-gray mt-1.5">
-                Codes are valid for 24 hours. Guests enter them at the event QR page.
-              </p>
-            </div>
+      <PrintSheetModal
+        open={!!batchResult}
+        onOpenChange={(open) => !open && closeBatchResult()}
+        batchResult={batchResult}
+        onPrint={handlePrint}
+      />
 
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setBatchModalOpen(false)}
-                className="btn-ghost"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleBatchGenerate}
-                disabled={batchGenerating}
-                className="btn-primary"
-              >
-                {batchGenerating
-                  ? `Generating ${batchCount} codes...`
-                  : `Generate ${batchCount} Codes`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ───── Print Sheet Modal ───── */}
+      {/* Print-only sheet - Kept outside DialogPortal to ensure it's part of the main document flow for window.print() */}
       {batchResult && (
-        <>
-          {/* Non-print wrapper — hidden during print */}
-          <div className="print:hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl p-8 max-w-lg w-full space-y-5 shadow-xl max-h-[80vh] flex flex-col">
-              <div className="flex items-center justify-between shrink-0">
-                <h2 className="text-lg font-semibold text-deep-shadow">
-                  Codes — {batchResult.eventName}
-                </h2>
-                <button
-                  onClick={closeBatchResult}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-black/5 transition-colors"
-                >
-                  <X size={18} className="text-misty-gray" />
-                </button>
-              </div>
-
-              <p className="text-sm text-whisper-gray shrink-0">
-                {batchResult.codes.length} codes generated. Print and cut along the dashed lines.
-              </p>
-
-              {/* Code grid preview */}
-              <div className="overflow-y-auto flex-1 -mx-4 px-4">
-                <div className="grid grid-cols-5 gap-2">
-                  {batchResult.codes.map((c, i) => (
-                    <div
-                      key={i}
-                      className="border border-dashed border-black/15 rounded-lg p-2 text-center"
-                    >
-                      <p className="text-xs font-bold font-mono text-deep-shadow tracking-wider">
-                        {c.displayFormat}
-                      </p>
-                      <p className="text-[9px] text-misty-gray mt-1 leading-tight">
-                        {batchResult.eventName}
-                      </p>
-                      <Scissors size={10} className="text-misty-gray/30 mx-auto mt-1" />
-                    </div>
-                  ))}
-                  {/* Fill last row with empty cells for alignment */}
-                  {Array.from({
-                    length: (5 - (batchResult.codes.length % 5)) % 5,
-                  }).map((_, i) => (
-                    <div key={`empty-${i}`} className="p-2" />
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-2 shrink-0">
-                <button
-                  onClick={closeBatchResult}
-                  className="btn-ghost"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={handlePrint}
-                  className="btn-primary"
-                >
-                  <Printer size={15} /> Print Sheet
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Print-only sheet */}
-          <div className="hidden print:block fixed inset-0 z-[999] bg-white" ref={printSheetRef}>
+        <div className="hidden print:block fixed inset-0 z-[999] bg-white" ref={printSheetRef}>
             <div className="p-8 max-w-[210mm] mx-auto">
               <h2 className="text-xl font-bold text-deep-shadow text-center mb-6">
                 {batchResult.eventName} — Guest Codes
@@ -494,8 +398,7 @@ export default function EventDetailPage() {
                 ))}
               </div>
             </div>
-          </div>
-        </>
+        </div>
       )}
     </main>
   );

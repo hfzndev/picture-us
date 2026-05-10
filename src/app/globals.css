@@ -487,17 +487,24 @@ body {
 
 /* Ghost Button — transparent, subtle top border, pill-shaped */
 .btn-ghost {
-  background-color: transparent;
+  background: linear-gradient(
+    to right,
+    var(--color-deep-shadow) 50%,
+    transparent 50%
+  );
+  background-size: 200% 100%;
+  background-position: right bottom;
   color: var(--color-deep-shadow);
-  border: 1px solid rgba(0, 0, 0, 0.3);
-  border-radius: var(--radius-buttons);
+  border: 1px solid var(--color-deep-shadow);
+  border-radius: 0.5rem;
   font-weight: var(--font-weight-regular);
   font-family: var(--font-roobert);
   font-size: var(--text-body);
-  padding: 11px 34px;
+  padding: 0px 25px;
   cursor: pointer;
-  transition: border-color 200ms ease-out, opacity 200ms ease-out;
-  min-height: 44px;
+  transition: background-position 300ms ease-out, color 300ms ease-out,
+    border-color 200ms ease-out, opacity 200ms ease-out;
+  min-height: 42px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -505,12 +512,10 @@ body {
 }
 
 .btn-ghost:hover {
-  border-color: rgba(0, 0, 0, 0.6);
-  opacity: 0.85;
-}
-
-.btn-ghost:active {
-  transform: scale(0.97);
+  background-position: left bottom;
+  color: white;
+  border-color: var(--color-deep-shadow);
+  opacity: 1;
 }
 
 /* Text Link Button */

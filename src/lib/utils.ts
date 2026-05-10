@@ -1,4 +1,10 @@
 // src/lib/utils.ts
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 /**
  * Generate a 6-character guest code (uppercase, no ambiguous chars).
@@ -27,6 +33,7 @@ export function formatCode(code: string): string {
  * Generate a simple device fingerprint (not cryptographic — prevents casual token sharing).
  */
 export function generateDeviceFingerprint(): string {
+  if (typeof window === "undefined") return "";
   const components = [
     navigator.userAgent,
     `${screen.width}x${screen.height}`,
@@ -107,5 +114,6 @@ export function getPhotosRemaining(
  * Check if on a mobile device (used for camera-centric UX hints).
  */
 export function isMobileDevice(): boolean {
+  if (typeof window === "undefined") return false;
   return /Mobi|Android/i.test(navigator.userAgent);
 }

@@ -4,12 +4,11 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
+import { EmptyBinModal } from "@/components/admin/empty-bin-modal";
 import {
   ArrowLeft,
   Trash2,
   Undo2,
-  X,
-  AlertTriangle,
 } from "lucide-react";
 
 interface TrashedPhoto {
@@ -237,45 +236,13 @@ export default function RecycleBinPage() {
       )}
 
       {/* Empty Bin Confirmation Modal */}
-      {showEmptyConfirm && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => setShowEmptyConfirm(false)}
-        >
-          <div
-            className="bg-white rounded-2xl p-8 max-w-sm w-full text-center space-y-5 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center mx-auto">
-              <AlertTriangle size={20} className="text-rose-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg text-deep-shadow">
-                Empty recycle bin?
-              </h3>
-              <p className="text-sm text-whisper-gray mt-1">
-                This will permanently delete {photos.length} photo
-                {photos.length !== 1 ? "s" : ""}. This action cannot be undone.
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowEmptyConfirm(false)}
-                className="btn-ghost flex-1"
-              >
-                <X size={15} /> Cancel
-              </button>
-              <button
-                onClick={handleEmptyBin}
-                disabled={emptying}
-                className="btn-primary flex-1 bg-rose-500 hover:bg-rose-600"
-              >
-                {emptying ? "Deleting..." : "Empty Bin"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <EmptyBinModal
+        open={showEmptyConfirm}
+        onOpenChange={setShowEmptyConfirm}
+        onConfirm={handleEmptyBin}
+        loading={emptying}
+        photoCount={photos.length}
+      />
     </main>
   );
 }

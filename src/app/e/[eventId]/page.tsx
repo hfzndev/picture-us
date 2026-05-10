@@ -4,6 +4,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Camera, RefreshCw, MessageSquare, Heart } from "lucide-react";
+import { FinishEarlyModal } from "@/components/guest/finish-early-modal";
+import { PhotoPreviewModal } from "@/components/guest/photo-preview-modal";
 import { createClient } from "@/lib/supabase/browser";
 import {
   generateDeviceFingerprint,
@@ -125,11 +127,11 @@ export default function EventPage() {
           localStorage.setItem("pictureus_session_id", json.data.sessionId);
           localStorage.setItem("pictureus_device_fp", deviceFp);
 
-      setSession(json.data);
-      setScreen("name");
+          setSession(json.data);
+          setScreen("name");
 
-      // Clean up URL so they don't share it
-      window.history.replaceState({}, document.title, window.location.pathname);
+          // Clean up URL so they don't share it
+          window.history.replaceState({}, document.title, window.location.pathname);
         } catch {
           setCodeError("Network error. Check your connection and try again.");
         } finally {
@@ -710,45 +712,17 @@ export default function EventPage() {
           </div>
 
           {/* Finish early confirmation modal */}
-          {showFinishModal && (
-            <div
-              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in-up"
-              role="dialog"
-              aria-modal="true"
-            >
-              <div className="bg-midnight-canvas border border-whisper-gray/20 rounded-2xl p-6 max-w-xs w-full shadow-2xl">
-                <h3 className="text-lg font-semibold text-frost-white text-center mb-2">
-                  End your session?
-                </h3>
-                {finishError ? (
-                  <p className="text-sm text-red-400 text-center mb-6">{finishError}</p>
-                ) : (
-                  <p className="text-sm text-whisper-gray text-center mb-6">
-                    You still have {session ? session.photosLeft : 0} shot
-                    {(session?.photosLeft ?? 0) !== 1 ? "s" : ""} left.
-                    Your photos are saved — you'll get to leave a message.
-                  </p>
-                )}
-                <button
-                  onClick={handleFinishEarly}
-                  disabled={finishLoading}
-                  className="btn-primary w-full mb-3"
-                >
-                  {finishLoading ? "Ending..." : "Yes, finish"}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowFinishModal(false);
-                    setFinishError("");
-                  }}
-                  disabled={finishLoading}
-                  className="btn-secondary w-full"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+          <FinishEarlyModal
+            open={showFinishModal}
+            onOpenChange={(open) => {
+              setShowFinishModal(open);
+              if (!open) setFinishError("");
+            }}
+            onConfirm={handleFinishEarly}
+            loading={finishLoading}
+            error={finishError}
+            photosLeft={session?.photosLeft ?? 0}
+          />
 
           {/* Flash overlay */}
           {isCapturing && (
@@ -757,32 +731,15 @@ export default function EventPage() {
 
           {/* Photo preview modal */}
           {previewSrc && (
-            <div className="fixed inset-0 z-40 bg-black/80 flex flex-col items-center justify-center gap-4 p-4">
-              <img
-                src={previewSrc}
-                alt="Preview"
-                className="max-w-full max-h-[60vh] rounded-lg shadow-xl"
-              />
-              {showCaption && (
-                <input
-                  type="text"
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  placeholder="Add a note to this photo..."
-                  className="input-base max-w-sm"
-                  maxLength={200}
-                  autoFocus
-                />
-              )}
-              <div className="flex gap-3">
-                <button onClick={uploadPhoto} disabled={isUploading} className="btn-primary">
-                  {isUploading ? "Developing..." : "Save & Upload"}
-                </button>
-                <button onClick={dismissPreview} className="btn-secondary">
-                  Retake
-                </button>
-              </div>
-            </div>
+            <PhotoPreviewModal
+              src={previewSrc}
+              onUpload={uploadPhoto}
+              onRetake={dismissPreview}
+              uploading={isUploading}
+              showCaption={showCaption}
+              caption={caption}
+              onCaptionChange={setCaption}
+            />
           )}
         </div>
       )}

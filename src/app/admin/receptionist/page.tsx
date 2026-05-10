@@ -21,6 +21,7 @@ function ReceptionistContent() {
   const [copied, setCopied] = useState(false);
   const [eventName, setEventName] = useState("");
   const [error, setError] = useState("");
+  
 
   const fetchCodeCount = useCallback(async () => {
     if (!eventId) return;
@@ -100,26 +101,18 @@ function ReceptionistContent() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+
   return (
     <main className="admin-screen py-16">
-      {/* Back */}
-      <div className="text-left w-full mx-auto">
-        <button
-          onClick={() => router.push(`/admin/events/${eventId}`)}
-          className="flex items-center gap-1.5 text-sm text-whisper-gray hover:text-deep-shadow transition-colors mb-6"
-        >
-          <ArrowLeft size={16} /> Back
-        </button>
-      </div>
 
       {/* Page header */}
-      <div className="text-left w-full mx-auto">
-        <h1 className="text-2xl font-bold mb-4 flex justify-center text-deep-shadow">
+      <div className="text-left w-full mx-auto mb-10">
+        <h1 className="text-2xl font-bold mb-4 text-deep-shadow uppercase">
           Code Generator
         </h1>
-        {eventName && (
-          <p className="text-sm text-whisper-gray mb-8">{eventName}</p>
-        )}
+        <p className="text-whisper-gray text-sm">
+          Generating codes for upcoming guest in this event. Tap <span className="font-bold">"Generate Code"</span> to generate new codes
+        </p>
       </div>
 
       {/* Code Card */}

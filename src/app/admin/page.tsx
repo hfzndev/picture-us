@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/browser";
 import { QrCode, Plus } from "lucide-react";
 import QRCode from "qrcode";
 import { useCreateEventModal } from "./layout";
+import { QrCodeModal } from "@/components/admin/qr-code-modal";
 
 interface EventData {
   id: string;
@@ -39,11 +40,102 @@ export default function EventsPage() {
     const { data } = await supabase
       .from("events")
       .select("id, name, event_date, photo_limit, is_active")
+      .order("is_active", { ascending: false })
       .order("created_at", { ascending: false });
 
     if (data) setEvents(data);
     setLoading(false);
   };
+
+  const liveEvents = events.filter((e) => e.is_active);
+  const endedEvents = events.filter((e) => !e.is_active);
+
+  const renderEventCard = (event: EventData) => (
+    <div
+      key={event.id}
+      onClick={() =>
+        router.push(
+          event.is_active
+            ? `/admin/events/${event.id}`
+            : `/admin/events/${event.id}/summary`
+        )
+      }
+      className={`card-admin flex items-center justify-between w-full text-left cursor-pointer transition-all ${
+        !event.is_active ? "opacity-75 grayscale-[0.3]" : ""
+      }`}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter")
+          router.push(
+            event.is_active
+              ? `/admin/events/${event.id}`
+              : `/admin/events/${event.id}/summary`
+          );
+      }}
+    >
+      <div>
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold text-deep-shadow">{event.name}</h3>
+          <span
+            className={`w-2 h-2 rounded-full ${
+              event.is_active ? "bg-emerald-500 animate-pulse" : "bg-misty-gray"
+            }`}
+          />
+        </div>
+        <p className="text-sm text-whisper-gray">
+          {new Date(event.event_date).toLocaleDateString()} &middot;{" "}
+          {event.photo_limit} shots/guest
+        </p>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            router.push(`/admin/gallery/${event.id}`);
+          }}
+          className="tab-admin"
+        >
+          Gallery
+        </button>
+        {event.is_active && (
+          <button
+            onClick={async (e) => {
+              e.stopPropagation();
+              const guestUrl = `${window.location.origin}/e/${event.id}`;
+              const { data: ev } = await supabase
+                .from("events")
+                .select("receptionist_token")
+                .eq("id", event.id)
+                .single();
+              const receptionistUrl = `${window.location.origin}/admin/receptionist?event=${
+                event.id
+              }&token=${ev?.receptionist_token || ""}`;
+              const qrDataUrl = await QRCode.toDataURL(guestUrl, {
+                width: 256,
+              });
+              setQrModal({
+                eventId: event.id,
+                name: event.name,
+                guestUrl,
+                receptionistUrl,
+                qrDataUrl,
+              });
+            }}
+            className="tab-admin"
+          >
+            <QrCode size={14} />
+            QR
+          </button>
+        )}
+        {!event.is_active && (
+          <span className="text-[10px] font-bold uppercase tracking-widest text-misty-gray border border-black/5 px-2 py-1 rounded-md bg-black/5">
+            Ended
+          </span>
+        )}
+      </div>
+    </div>
+  );
 
   return (
     <main className="admin-screen">
@@ -87,113 +179,44 @@ export default function EventsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {events.map((event) => (
-            <div
-              key={event.id}
-              onClick={() => router.push(`/admin/events/${event.id}`)}
-              className="card-admin flex items-center justify-between w-full text-left cursor-pointer"
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter")
-                  router.push(`/admin/events/${event.id}`);
-              }}
-            >
-              <div>
-                <h3 className="font-semibold text-deep-shadow">
-                  {event.name}
-                </h3>
-                <p className="text-sm text-whisper-gray">
-                  {new Date(event.event_date).toLocaleDateString()} &middot;{" "}
-                  {event.photo_limit} shots/guest
-                </p>
+        <div className="space-y-10">
+          {/* Live Events Section */}
+          <section>
+            <h2 className="text-xs font-bold uppercase tracking-widest text-whisper-gray mb-4 flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Live Events ({liveEvents.length})
+            </h2>
+            {liveEvents.length === 0 ? (
+              <div className="p-8 border border-dashed border-black/10 rounded-2xl text-center">
+                <p className="text-sm text-misty-gray">No live events right now.</p>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(`/admin/gallery/${event.id}`);
-                  }}
-                  className="tab-admin"
-                >
-                  Gallery
-                </button>
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    const guestUrl = `${window.location.origin}/e/${event.id}`;
-                    const { data: ev } = await supabase
-                      .from("events")
-                      .select("receptionist_token")
-                      .eq("id", event.id)
-                      .single();
-                    const receptionistUrl = `${window.location.origin}/admin/receptionist?event=${event.id}&token=${ev?.receptionist_token || ""}`;
-                    const qrDataUrl = await QRCode.toDataURL(guestUrl, {
-                      width: 256,
-                    });
-                    setQrModal({
-                      eventId: event.id,
-                      name: event.name,
-                      guestUrl,
-                      receptionistUrl,
-                      qrDataUrl,
-                    });
-                  }}
-                  className="tab-admin"
-                >
-                  <QrCode size={14} />
-                  QR
-                </button>
+            ) : (
+              <div className="space-y-3">
+                {liveEvents.map(renderEventCard)}
               </div>
-            </div>
-          ))}
+            )}
+          </section>
+
+          {/* Ended Events Section */}
+          {endedEvents.length > 0 && (
+            <section>
+              <h2 className="text-xs font-bold uppercase tracking-widest text-whisper-gray mb-4">
+                Ended Events ({endedEvents.length})
+              </h2>
+              <div className="space-y-3">
+                {endedEvents.map(renderEventCard)}
+              </div>
+            </section>
+          )}
         </div>
       )}
 
       {/* QR Code Modal */}
-      {qrModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => setQrModal(null)}
-        >
-          <div
-            className="bg-white rounded-2xl p-8 max-w-sm w-full text-center space-y-5 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="font-semibold text-lg text-deep-shadow">
-              {qrModal.name}
-            </h3>
-            <p className="text-xs text-whisper-gray">Guest QR Code</p>
-            <img
-              src={qrModal.qrDataUrl}
-              alt="Event QR Code"
-              className="mx-auto rounded-lg"
-            />
-            <p className="text-xs text-whisper-gray break-all font-mono">
-              {qrModal.guestUrl}
-            </p>
-            <div className="space-y-2.5">
-              <a
-                href={qrModal.qrDataUrl}
-                download={`${qrModal.name}-qr.png`}
-                className="btn-primary block text-center no-underline text-sm"
-              >
-                Download QR
-              </a>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(qrModal.receptionistUrl);
-                  alert("Receptionist link copied!");
-                }}
-                className="btn-ghost block w-full text-sm"
-              >
-                Copy Receptionist Link
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <QrCodeModal
+        open={!!qrModal}
+        onOpenChange={(open) => !open && setQrModal(null)}
+        data={qrModal}
+      />
     </main>
   );
 }

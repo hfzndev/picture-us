@@ -17,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { QrPreviewModal } from "@/components/admin/qr-preview-modal";
 
 type CodeStatus = "unused" | "active" | "consumed" | "expired";
 
@@ -76,96 +77,6 @@ function fmtTime(iso: string | null) {
 }
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20] as const;
-
-// QR Modal Component
-function QrModal({
-  code,
-  eventId,
-  onClose,
-}: {
-  code: GuestCode;
-  eventId: string;
-  onClose: () => void;
-}) {
-  const [qrUrl, setQrUrl] = useState<string>("");
-  const guestUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/e/${eventId}?code=${code.code}`
-      : "";
-
-  useEffect(() => {
-    if (!guestUrl) return;
-    import("qrcode").then(({ default: QRCodeLib }) => {
-      QRCodeLib.toDataURL(guestUrl, { width: 220, margin: 2 }).then(setQrUrl);
-    });
-  }, [guestUrl]);
-
-  // Close on backdrop click
-  const handleBackdrop = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4"
-      onClick={handleBackdrop}
-    >
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-xs p-6 flex flex-col items-center gap-4 relative">
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-misty-gray hover:text-deep-shadow transition-colors"
-          aria-label="Close"
-        >
-          <X size={18} />
-        </button>
-
-        <h2 className="text-base font-semibold text-deep-shadow">QR Code</h2>
-
-        {/* QR Image */}
-        <div className="bg-white rounded-xl border border-black/8 p-3 shadow-sm">
-          {qrUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={qrUrl} alt="QR Code" width={220} height={220} />
-          ) : (
-            <div className="w-[220px] h-[220px] bg-black/5 rounded animate-pulse" />
-          )}
-        </div>
-
-        {/* Code */}
-        <p className="text-2xl font-bold font-mono tracking-widest text-deep-shadow">
-          {code.displayFormat}
-        </p>
-
-        {/* URL (truncated) */}
-        <p className="text-xs text-misty-gray text-center break-all px-2 leading-relaxed">
-          {guestUrl}
-        </p>
-
-        {/* Download */}
-        {qrUrl && (
-          <a
-            href={qrUrl}
-            download={`code-${code.displayFormat}.png`}
-            className="flex items-center gap-2 text-sm text-amber-600 hover:text-amber-700 font-medium transition-colors"
-          >
-            <Download size={15} />
-            Download QR
-          </a>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default function CodesListPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -252,19 +163,22 @@ export default function CodesListPage() {
     <>
       {/* QR Modal */}
       {qrCode && (
-        <QrModal code={qrCode} eventId={eventId} onClose={closeQr} />
+        <QrPreviewModal
+          code={qrCode.code}
+          displayFormat={qrCode.displayFormat}
+          eventId={eventId}
+          onClose={closeQr}
+        />
       )}
 
       <main className="admin-screen">
-        {/* Back */}
-
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-deep-shadow">Guest Codes</h1>
+            <h1 className="text-2xl font-bold text-deep-shadow uppercase">Code List</h1>
             {eventName && (
-              <p className="text-sm text-whisper-gray mt-0.5">{eventName}</p>
+              <p className="text-sm text-whisper-gray mt-0.5 ">List of codes that has been generated for <span className="uppercase font-bold">{eventName}</span></p>
             )}
           </div>
 
