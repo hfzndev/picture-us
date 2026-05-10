@@ -17,7 +17,6 @@ import {
   X,
   Scissors,
 } from "lucide-react";
-import QRCode from "qrcode";
 
 interface EventDetail {
   id: string;
@@ -56,6 +55,7 @@ export default function EventDetailPage() {
     codes: BatchCodeResult[];
     eventName: string;
   } | null>(null);
+  const [qrDataUrls, setQrDataUrls] = useState<string[]>([]);
   const printSheetRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -152,9 +152,23 @@ export default function EventDetailPage() {
     window.print();
   };
 
+  // Generate QR data URLs when batch result arrives
+  useEffect(() => {
+    if (!batchResult) { setQrDataUrls([]); return; }
+    const origin = window.location.origin;
+    import("qrcode").then(({ default: QRCodeLib }) => {
+      Promise.all(
+        batchResult.codes.map((c) =>
+          QRCodeLib.toDataURL(`${origin}/e/${eventId}?code=${c.code}`, { width: 120, margin: 1 })
+        )
+      ).then(setQrDataUrls);
+    });
+  }, [batchResult, eventId]);
+
   const closeBatchResult = () => {
     setBatchResult(null);
     setBatchCount(50);
+    setQrDataUrls([]);
   };
 
   const statCards = event
@@ -198,7 +212,7 @@ export default function EventDetailPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-2xl font-bold text-deep-shadow">{event.name}</h1>
+              <h1 className="text-2xl font-bold text-deep-shadow uppercase">{event.name}</h1>
               <p className="text-sm text-whisper-gray mt-1">
                 {new Date(event.event_date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
               </p>
@@ -260,6 +274,9 @@ export default function EventDetailPage() {
               <Link href={`/admin/receptionist?event=${event.id}`} className="btn-ghost no-underline text-sm">
                 <Ticket size={15} /> Generate Codes
               </Link>
+              <Link href={`/admin/codes/${event.id}`} className="btn-ghost no-underline text-sm">
+                <Ticket size={15} /> View Codes
+              </Link>
               <button
                 onClick={() => setBatchModalOpen(true)}
                 className="btn-ghost text-sm"
@@ -269,7 +286,8 @@ export default function EventDetailPage() {
               <button
                 onClick={async () => {
                   const guestUrl = `${window.location.origin}/e/${event.id}`;
-                  const qrDataUrl = await QRCode.toDataURL(guestUrl, { width: 256 });
+                  const { default: QRCodeLib } = await import("qrcode");
+                  const qrDataUrl = await QRCodeLib.toDataURL(guestUrl, { width: 256 });
                   const w = window.open("", "_blank");
                   if (w) {
                     w.document.write(`<html><head><title>Print QR — ${event.name}</title><style>body { margin:0; display:flex; align-items:center; justify-content:center; min-height:100vh; font-family:Inter,sans-serif; } .card { text-align:center; } img { width:256px; height:256px; } h2 { font-size:20px; margin:16px 0 4px; color:#181818; } p { color:#6d6d6d; font-size:14px; margin:0; } @media print { body { margin:0; padding:20mm; } }</style></head><body><div class="card"><img src="${qrDataUrl}" alt="QR Code" /><h2>${event.name}</h2><p>Scan to take photos!</p><p style="font-size:12px;margin-top:20px;color:#aaa;">${guestUrl}</p></div><script>window.onload=function(){window.print()}</script></body></html>`);
@@ -451,32 +469,31 @@ export default function EventDetailPage() {
               <h2 className="text-xl font-bold text-deep-shadow text-center mb-6">
                 {batchResult.eventName} — Guest Codes
               </h2>
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-4 gap-4">
                 {batchResult.codes.map((c, i) => (
                   <div
                     key={i}
-                    className="border border-dashed border-black/30 rounded-xl p-4 text-center min-h-[80px] flex flex-col items-center justify-center"
+                    className="border border-dashed border-black/30 rounded-xl p-4 text-center flex flex-col items-center justify-center gap-2"
                   >
+                    {qrDataUrls[i] && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={qrDataUrls[i]} alt={`QR ${c.displayFormat}`} width={100} height={100} />
+                    )}
                     <p className="text-sm font-bold font-mono text-deep-shadow tracking-widest">
                       {c.displayFormat}
                     </p>
-                    <p className="text-[10px] text-gray-400 mt-2 leading-tight">
+                    <p className="text-[9px] text-gray-400 leading-tight">
                       {batchResult.eventName}
                     </p>
-                    <p className="text-[8px] text-gray-300 mt-1">
-                      Scan at event
-                    </p>
-                    <Scissors size={12} className="text-gray-300 mt-2" />
                   </div>
                 ))}
                 {Array.from({
-                  length: (5 - (batchResult.codes.length % 5)) % 5,
+                  length: (4 - (batchResult.codes.length % 4)) % 4,
                 }).map((_, i) => (
                   <div key={`empty-print-${i}`} className="p-4" />
                 ))}
               </div>
             </div>
-            <script dangerouslySetInnerHTML={{ __html: "window.onload=function(){window.print();};" }} />
           </div>
         </>
       )}

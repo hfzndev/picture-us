@@ -20,6 +20,7 @@ import {
   Check,
   QrCode,
   LayoutDashboard,
+  BookOpenText,
 } from "lucide-react";
 import QRCode from "qrcode";
 
@@ -42,10 +43,11 @@ export default function AdminLayout({
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [selectedEventName, setSelectedEventName] = useState<string | null>(null);
 
   // Derive selected event from URL path segments
   const match = pathname.match(
-    /\/admin\/(?:gallery|guests|recycle-bin|events)\/([a-f0-9-]+)/
+    /\/admin\/(?:gallery|guests|recycle-bin|events|codes)\/([a-f0-9-]+)/
   );
 
   // Receptionist page uses query param — must be in useEffect to avoid SSR hydration mismatch
@@ -59,6 +61,20 @@ export default function AdminLayout({
   }, [pathname]);
 
   const selectedEventId = match?.[1] ?? receptionistEventId;
+
+  // Fetch event name when selectedEventId changes
+  useEffect(() => {
+    if (!selectedEventId) {
+      setSelectedEventName(null);
+      return;
+    }
+    fetch(`/api/events/${selectedEventId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) setSelectedEventName(d.data.name);
+      })
+      .catch(() => {});
+  }, [selectedEventId]);
 
   // --- Create Event Modal State ---
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -124,6 +140,11 @@ export default function AdminLayout({
         },
         {
           href: `/admin/receptionist?event=${selectedEventId}`,
+          label: "Receptionist",
+          icon: BookOpenText,
+        },
+        {
+          href: `/admin/codes/${selectedEventId}`,
           label: "Codes",
           icon: Ticket,
         },
@@ -284,8 +305,8 @@ export default function AdminLayout({
             {/* Separator + Event Nav */}
             {selectedEventId && (
               <div >
-                <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-misty-gray mb-2">
-                  Event
+                <p className="px-3 text-[10px] font-semibold uppercase tracking-widest text-misty-gray mb-2 truncate">
+                  {selectedEventName ?? "Loading..."}
                 </p>
 
                 {eventNavItems.map((item) => {

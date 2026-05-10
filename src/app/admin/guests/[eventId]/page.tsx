@@ -1,24 +1,25 @@
 // src/app/admin/guests/[eventId]/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
+import { useDebounce } from "@/hooks/use-debounce";
 import { ArrowLeft, Search, User, Image as ImageIcon } from "lucide-react";
 
 interface Session {
   id: string;
-  guest_alias: string;
+  guest_name: string | null;
   status: string;
-  photo_count: number;
+  photos_taken: number;
   created_at: string;
 }
 
 interface GuestDetail {
   id: string;
-  guest_alias: string;
+  guest_name: string | null;
   status: string;
-  photo_count: number;
+  photos_taken: number;
   created_at: string;
   photos: { id: string; url: string }[];
   message: string | null;
@@ -35,14 +36,15 @@ export default function GuestsPage() {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 300);
 
   useEffect(() => {
     async function load() {
       const { data } = await supabase
         .from("sessions")
-        .select("id, guest_alias, status, photo_count, created_at")
+        .select("id, guest_name, status, photos_taken, created_at:activated_at")
         .eq("event_id", eventId)
-        .order("created_at", { ascending: false });
+        .order("activated_at", { ascending: false });
 
       if (data) setSessions(data);
       setLoading(false);
@@ -63,9 +65,11 @@ export default function GuestsPage() {
     }
   };
 
-  const filteredSessions = sessions.filter((s) =>
-    s.guest_alias.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredSessions = useMemo(() => {
+    return sessions.filter((s) =>
+      (s.guest_name ?? "").toLowerCase().includes(debouncedSearch.toLowerCase())
+    );
+  }, [sessions, debouncedSearch]);
 
   return (
     <main className="admin-screen">
@@ -135,7 +139,7 @@ export default function GuestsPage() {
                 }`}
               >
                 <p className="font-semibold text-sm text-deep-shadow">
-                  {session.guest_alias}
+                  {session.guest_name ?? "Anonymous"}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
                   <span
@@ -148,7 +152,7 @@ export default function GuestsPage() {
                     {session.status}
                   </span>
                   <span className="text-xs text-whisper-gray">
-                    {session.photo_count} photos
+                    {session.photos_taken} photos
                   </span>
                 </div>
               </button>
@@ -172,10 +176,10 @@ export default function GuestsPage() {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-lg font-bold text-deep-shadow">
-                    {selectedSession.guest_alias}
+                    {selectedSession.guest_name ?? "Anonymous"}
                   </h2>
                   <p className="text-xs text-whisper-gray mt-1">
-                    {selectedSession.photo_count} photos &middot;{" "}
+                    {selectedSession.photos_taken} photos &middot;{" "}
                     {new Date(selectedSession.created_at).toLocaleDateString()}
                   </p>
                 </div>

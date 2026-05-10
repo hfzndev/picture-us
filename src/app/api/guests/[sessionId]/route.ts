@@ -16,6 +16,7 @@ export async function GET(
       .select(
         `
         id,
+        guest_name,
         status,
         photos_taken,
         activated_at,
@@ -92,18 +93,15 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: {
-        sessionId: session.id,
+        id: session.id,
+        guest_name: session.guest_name,
         guestLabel,
         status: session.status,
-        photosTaken: session.photos_taken,
+        photos_taken: session.photos_taken,
         photoLimit,
-        activatedAt: session.activated_at,
-        revokedAt: session.revoked_at,
-        lastPhotoAt: session.last_photo_at,
+        created_at: session.activated_at,
         photos: photosWithUrls,
-        message: message
-          ? { body: message.body, createdAt: message.created_at }
-          : null,
+        message: message?.body ?? null,
       },
     });
   } catch (err) {

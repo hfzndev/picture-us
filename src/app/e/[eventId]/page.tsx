@@ -13,7 +13,7 @@ import {
 } from "@/lib/utils";
 import type { ApiResponse } from "@/lib/utils";
 
-type GuestScreen = "code" | "camera" | "farewell" | "ended";
+type GuestScreen = "code" | "name" | "camera" | "farewell" | "ended";
 
 interface SessionData {
   sessionToken: string;
@@ -62,6 +62,16 @@ export default function EventPage() {
   const [message, setMessage] = useState("");
   const [messageSending, setMessageSending] = useState(false);
 
+  // Name entry
+  const [guestName, setGuestName] = useState("");
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameError, setNameError] = useState("");
+
+  // Finish early
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [finishLoading, setFinishLoading] = useState(false);
+  const [finishError, setFinishError] = useState("");
+
   // Load event info on mount
   useEffect(() => {
     async function loadEvent() {
@@ -77,6 +87,59 @@ export default function EventPage() {
     }
     loadEvent();
   }, [eventId, supabase]);
+
+  // Auto-activate code if provided in URL
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const codeParam = searchParams.get("code");
+    
+    if (codeParam && codeParam.length === 6) {
+      // Pre-fill digits
+      const digits = codeParam.toUpperCase().split("");
+      setCodeDigits(digits);
+      
+      // We can't directly call submitCode here because it uses state that might not be ready,
+      // but we can set a flag or just call the API directly
+      const autoActivate = async () => {
+        setCodeLoading(true);
+        setCodeError("");
+
+        const deviceFp = generateDeviceFingerprint();
+
+        try {
+          const res = await fetch("/api/codes/activate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: codeParam.toUpperCase(), eventId, deviceFp }),
+          });
+
+          const json: ApiResponse<SessionData> = await res.json();
+
+          if (!json.success || !json.data) {
+            setCodeError(json.error === "TOO_MANY_ATTEMPTS" ? "Too many attempts. Wait a moment." : "This code is invalid or has already been used.");
+            return;
+          }
+
+          // Store session
+          localStorage.setItem("pictureus_token", json.data.sessionToken);
+          localStorage.setItem("pictureus_session_id", json.data.sessionId);
+          localStorage.setItem("pictureus_device_fp", deviceFp);
+
+      setSession(json.data);
+      setScreen("name");
+
+      // Clean up URL so they don't share it
+      window.history.replaceState({}, document.title, window.location.pathname);
+        } catch {
+          setCodeError("Network error. Check your connection and try again.");
+        } finally {
+          setCodeLoading(false);
+        }
+      };
+      
+      autoActivate();
+    }
+  }, [eventId]);
 
   // Initialize camera
   const initCamera = useCallback(async () => {
@@ -209,11 +272,42 @@ export default function EventPage() {
       localStorage.setItem("pictureus_device_fp", deviceFp);
 
       setSession(json.data);
-      setScreen("camera");
+      setScreen("name");
     } catch {
       setCodeError("Network error. Check your connection and try again.");
     } finally {
       setCodeLoading(false);
+    }
+  };
+
+  // --- Name Entry ---
+  const saveName = async (skipName?: boolean) => {
+    if (!session) return;
+    setNameSaving(true);
+    setNameError("");
+
+    const name = skipName ? "" : guestName.trim();
+
+    try {
+      const token = localStorage.getItem("pictureus_token");
+      const deviceFp = localStorage.getItem("pictureus_device_fp");
+
+      if (name) {
+        await fetch(`/api/sessions/${session.sessionId}/name`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            "X-Device-FP": deviceFp || "",
+          },
+          body: JSON.stringify({ guestName: name }),
+        });
+      }
+    } catch {
+      // Non-fatal — proceed to camera regardless
+    } finally {
+      setNameSaving(false);
+      setScreen("camera");
     }
   };
 
@@ -326,6 +420,44 @@ export default function EventPage() {
     setShowCaption(false);
   };
 
+  // --- Finish Early ---
+  const handleFinishEarly = async () => {
+    if (!session) return;
+    setFinishLoading(true);
+    setFinishError("");
+
+    try {
+      const token = localStorage.getItem("pictureus_token");
+      const deviceFp = localStorage.getItem("pictureus_device_fp");
+
+      const res = await fetch(`/api/sessions/${session.sessionId}/finish`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "X-Device-FP": deviceFp || "",
+        },
+      });
+
+      const json: ApiResponse = await res.json();
+
+      if (!json.success) {
+        setFinishError(
+          json.error === "SESSION_NOT_ACTIVE"
+            ? "Session already ended."
+            : "Couldn't end session. Try again."
+        );
+        return;
+      }
+
+      setShowFinishModal(false);
+      setScreen("farewell");
+    } catch {
+      setFinishError("Network error. Try again.");
+    } finally {
+      setFinishLoading(false);
+    }
+  };
+
   // --- Farewell ---
   const sendMessage = async () => {
     if (!message.trim() || !session) return;
@@ -429,6 +561,50 @@ export default function EventPage() {
         </div>
       )}
 
+      {screen === "name" && (
+        <div className="flex flex-col items-center gap-8 flex-1 justify-center px-6">
+          <div className="flex flex-col items-center gap-3 animate-fade-in-up text-center">
+            <div className="w-16 h-16 rounded-full bg-amber-500/15 flex items-center justify-center">
+              <span className="text-3xl">👋</span>
+            </div>
+            <h2 className="text-2xl font-bold text-frost-white">
+              What&apos;s your name?
+            </h2>
+            <p className="text-sm text-whisper-gray max-w-xs">
+              So we can label your photos in the gallery.
+            </p>
+          </div>
+
+          <div className="w-full max-w-xs animate-fade-in-up">
+            <input
+              type="text"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value.slice(0, 80))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && guestName.trim()) saveName();
+              }}
+              placeholder="Your name…"
+              className="input-base text-center text-lg w-full"
+              autoFocus
+              maxLength={80}
+            />
+            {nameError && (
+              <p className="text-xs text-red-400 mt-2 text-center">{nameError}</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-3 w-full max-w-xs animate-fade-in-up">
+            <button
+              onClick={() => saveName()}
+              disabled={!guestName.trim() || nameSaving}
+              className="btn-primary w-full"
+            >
+              {nameSaving ? "Saving…" : "Continue →"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {screen === "camera" && (
         <div className="flex flex-col flex-1 relative">
           {/* Shot counter */}
@@ -521,6 +697,58 @@ export default function EventPage() {
               <MessageSquare size={18} className="text-whisper-gray" />
             </button>
           </div>
+
+          {/* Finish early link */}
+          <div className="flex justify-center mt-4 mb-2">
+            <button
+              onClick={() => setShowFinishModal(true)}
+              className="text-xs text-misty-gray underline decoration-dotted hover:text-whisper-gray focus-visible:ring-2 focus-visible:ring-amber-400/50 rounded active:scale-97 transition-colors"
+              aria-label="End photo session early"
+            >
+              Finish early?
+            </button>
+          </div>
+
+          {/* Finish early confirmation modal */}
+          {showFinishModal && (
+            <div
+              className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in-up"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="bg-midnight-canvas border border-whisper-gray/20 rounded-2xl p-6 max-w-xs w-full shadow-2xl">
+                <h3 className="text-lg font-semibold text-frost-white text-center mb-2">
+                  End your session?
+                </h3>
+                {finishError ? (
+                  <p className="text-sm text-red-400 text-center mb-6">{finishError}</p>
+                ) : (
+                  <p className="text-sm text-whisper-gray text-center mb-6">
+                    You still have {session ? session.photosLeft : 0} shot
+                    {(session?.photosLeft ?? 0) !== 1 ? "s" : ""} left.
+                    Your photos are saved — you'll get to leave a message.
+                  </p>
+                )}
+                <button
+                  onClick={handleFinishEarly}
+                  disabled={finishLoading}
+                  className="btn-primary w-full mb-3"
+                >
+                  {finishLoading ? "Ending..." : "Yes, finish"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowFinishModal(false);
+                    setFinishError("");
+                  }}
+                  disabled={finishLoading}
+                  className="btn-secondary w-full"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Flash overlay */}
           {isCapturing && (

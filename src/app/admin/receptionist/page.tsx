@@ -1,9 +1,10 @@
 // src/app/admin/receptionist/page.tsx
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Camera, Copy, Check, ArrowLeft } from "lucide-react";
+import { Copy, Check, ArrowLeft } from "lucide-react";
+import { createClient } from "@/lib/supabase/browser";
 
 function ReceptionistContent() {
   const router = useRouter();
@@ -11,12 +12,24 @@ function ReceptionistContent() {
   const eventId = searchParams.get("event") || "";
   const token = searchParams.get("token") || "";
 
+  const supabase = createClient();
+
   const [currentCode, setCurrentCode] = useState("");
-  const [codesUsed, setCodesUsed] = useState(0);
+  const [qrUrl, setQrUrl] = useState("");
+  const [totalCodes, setTotalCodes] = useState<number | null>(null);
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [eventName, setEventName] = useState("");
   const [error, setError] = useState("");
+
+  const fetchCodeCount = useCallback(async () => {
+    if (!eventId) return;
+    const { count } = await supabase
+      .from("guest_codes")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId);
+    setTotalCodes(count ?? 0);
+  }, [eventId, supabase]);
 
   useEffect(() => {
     if (token) {
@@ -35,7 +48,19 @@ function ReceptionistContent() {
         })
         .catch(() => {});
     }
-  }, [eventId, token]);
+
+    fetchCodeCount();
+  }, [eventId, token, fetchCodeCount]);
+
+  // Generate QR data URL whenever currentCode changes
+  useEffect(() => {
+    if (!currentCode) { setQrUrl(""); return; }
+    const raw = currentCode.replace("-", "");
+    const url = `${window.location.origin}/e/${eventId}?code=${raw}`;
+    import("qrcode").then(({ default: QRCodeLib }) => {
+      QRCodeLib.toDataURL(url, { width: 160, margin: 1 }).then(setQrUrl);
+    });
+  }, [currentCode, eventId]);
 
   const generateCode = async () => {
     setGenerating(true);
@@ -52,8 +77,8 @@ function ReceptionistContent() {
 
       if (json.success) {
         setCurrentCode(json.data.displayFormat);
-        setCodesUsed((prev) => prev + 1);
         setCopied(false);
+        fetchCodeCount();
       } else {
         setError(
           json.error === "INVALID_RECEPTIONIST_TOKEN"
@@ -76,21 +101,21 @@ function ReceptionistContent() {
   };
 
   return (
-    <main className="admin-screen items-center text-center gap-8 py-16">
+    <main className="admin-screen py-16">
       {/* Back */}
-      <div className="text-left w-full max-w-sm mx-auto">
+      <div className="text-left w-full mx-auto">
         <button
           onClick={() => router.push(`/admin/events/${eventId}`)}
           className="flex items-center gap-1.5 text-sm text-whisper-gray hover:text-deep-shadow transition-colors mb-6"
         >
-          <ArrowLeft size={16} /> Back to Events
+          <ArrowLeft size={16} /> Back
         </button>
       </div>
 
       {/* Page header */}
-      <div className="text-left w-full max-w-sm mx-auto">
-        <h1 className="text-2xl font-bold text-deep-shadow mb-1">
-          Receptionist Panel
+      <div className="text-left w-full mx-auto">
+        <h1 className="text-2xl font-bold mb-4 flex justify-center text-deep-shadow">
+          Code Generator
         </h1>
         {eventName && (
           <p className="text-sm text-whisper-gray mb-8">{eventName}</p>
@@ -99,17 +124,30 @@ function ReceptionistContent() {
 
       {/* Code Card */}
       <div
-        className={`card-admin w-full max-w-sm mx-auto cursor-pointer transition-all duration-200 text-center ${
+        className={`card-admin w-full min-h-80 max-w-lg mx-auto cursor-pointer transition-all duration-200 text-center ${
           currentCode ? "hover:border-black/20 hover:shadow-md" : ""
         }`}
         onClick={copyCode}
       >
         {currentCode ? (
-          <>
-            <p className="text-4xl font-bold text-deep-shadow font-mono tracking-[0.3em]">
+          <div className="flex flex-col items-center gap-4">
+            <h2 className="text-lg font-medium text-deep-shadow mb-2">Scan to join</h2>
+            <div className="bg-white p-4 rounded-xl inline-block mb-2 shadow-sm border border-black/5">
+              {qrUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={qrUrl} alt="QR Code" width={160} height={160} />
+              ) : (
+                <div className="w-40 h-40 bg-black/5 rounded animate-pulse" />
+              )}
+            </div>
+            
+            <div className="w-full h-px bg-black/5 my-2" />
+            
+            <p className="text-sm text-whisper-gray mb-1">Or enter manual code</p>
+            <p className="text-3xl font-bold text-deep-shadow font-mono tracking-widest">
               {currentCode}
             </p>
-            <div className="flex items-center justify-center gap-1.5 mt-3 text-xs text-whisper-gray">
+            <div className="flex items-center justify-center gap-1.5 mt-2 text-xs text-whisper-gray">
               {copied ? (
                 <>
                   <Check size={14} className="text-green-600" />
@@ -122,20 +160,20 @@ function ReceptionistContent() {
                 </>
               )}
             </div>
-          </>
+          </div>
         ) : (
           <>
+          <div className=" flex justify-center flex-col items-center">
             <p className="text-4xl font-bold text-black/10 font-mono tracking-[0.3em] select-none">
-              — — &mdash; &mdash; &mdash;
+              — — &mdash; &mdash; &mdash; &mdash;
             </p>
             <p className="text-xs text-whisper-gray mt-3">
-              Tap the button to generate a guest code
+              Tap "Generate Code"
             </p>
+          </div>
           </>
         )}
       </div>
-
-      <p className="text-sm text-whisper-gray">Show this to the next guest</p>
 
       {error && (
         <p className="text-sm text-red-600 max-w-xs" role="alert">
@@ -147,14 +185,14 @@ function ReceptionistContent() {
       <button
         onClick={generateCode}
         disabled={generating}
-        className="btn-primary w-full max-w-sm"
+        className="btn-primary w-full mt-4 mb-2 max-w-md mx-auto"
       >
-        {generating ? "Generating..." : "→ Next Guest Code"}
+        {generating ? "Generating..." : "Generate Code"}
       </button>
 
       {/* Stats */}
-      <p className="text-xs text-whisper-gray font-mono">
-        Codes used: {codesUsed}
+      <p className="text-xs text-whisper-gray flex justify-center">
+      Codes generated: {totalCodes ?? "—"}
       </p>
     </main>
   );

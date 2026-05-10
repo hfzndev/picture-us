@@ -344,7 +344,6 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.15);
   background-color: var(--color-frost-white);
   color: var(--color-deep-shadow);
-  padding: 0 16px;
   font-family: var(--font-roobert);
   font-size: 15px;
   transition: border-color 200ms ease-out, box-shadow 200ms ease-out;
