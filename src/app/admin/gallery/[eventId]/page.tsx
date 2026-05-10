@@ -1,10 +1,16 @@
 // src/app/admin/gallery/[eventId]/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
-import { ArrowLeft, Download, MessageSquareHeart, Image as ImageIcon, Archive, Trash2, LayoutGrid, List, Users, X, Clock } from "lucide-react";
+import { ArrowLeft, Download, MessageSquareHeart, Image as ImageIcon, Archive, Trash2, LayoutGrid, List, X, Clock, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Photo {
   id: string;
@@ -25,7 +31,7 @@ interface Message {
 }
 
 type Tab = "photos" | "messages";
-type ViewMode = "grid" | "table" | "byGuest";
+type ViewMode = "grid" | "table";
 
 export default function GalleryPage() {
   const params = useParams<{ eventId: string }>();
@@ -42,6 +48,7 @@ export default function GalleryPage() {
   const [exporting, setExporting] = useState(false);
   const [trashingIds, setTrashingIds] = useState<Set<string>>(new Set());
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [expandedGuests, setExpandedGuests] = useState<Set<string>>(new Set());
 
   // Load initial data
   useEffect(() => {
@@ -199,6 +206,22 @@ export default function GalleryPage() {
     window.open(url, "_blank");
   };
 
+  const downloadAllPhotos = async (photosToDownload: Photo[]) => {
+    for (const photo of photosToDownload) {
+      if (photo.url) {
+        // We trigger downloads sequentially to avoid browser blocking multiple popups
+        const link = document.createElement("a");
+        link.href = photo.url;
+        link.download = `photo-${photo.id}.jpg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        // Small delay to help browser handle multiple downloads
+        await new Promise(r => setTimeout(r, 100));
+      }
+    }
+  };
+
   const handleTrash = async (photoId: string) => {
     setTrashingIds((prev) => new Set(prev).add(photoId));
     try {
@@ -248,6 +271,7 @@ export default function GalleryPage() {
     const sId = photo.session_id;
     if (!acc[sId]) {
       acc[sId] = {
+        sessionId: sId,
         guestName: photo.guest_name || "Anonymous",
         photos: [],
         messages: messages.filter((m) => m.session_id === sId),
@@ -255,12 +279,13 @@ export default function GalleryPage() {
     }
     acc[sId].photos.push(photo);
     return acc;
-  }, {} as Record<string, { guestName: string; photos: Photo[]; messages: Message[] }>);
+  }, {} as Record<string, { sessionId: string; guestName: string; photos: Photo[]; messages: Message[] }>);
 
   // Catch sessions with messages but NO photos
   messages.forEach((msg) => {
     if (!groupedByGuest[msg.session_id]) {
       groupedByGuest[msg.session_id] = {
+        sessionId: msg.session_id,
         guestName: msg.guest_name || "Anonymous",
         photos: [],
         messages: messages.filter((m) => m.session_id === msg.session_id),
@@ -268,21 +293,23 @@ export default function GalleryPage() {
     }
   });
 
+  const toggleGuestExpansion = (sessionId: string) => {
+    setExpandedGuests(prev => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) next.delete(sessionId);
+      else next.add(sessionId);
+      return next;
+    });
+  };
+
   return (
     <main className="admin-screen">
       {/* Detail Popup */}
-      {selectedPhoto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 animate-fade-in">
-          <div className="relative bg-white rounded-xl max-w-2xl w-full overflow-hidden shadow-2xl animate-scale-in">
-            <button
-              onClick={() => setSelectedPhoto(null)}
-              className="absolute top-4 right-4 z-10 p-2 bg-black/20 hover:bg-black/40 text-white rounded-full transition-colors"
-            >
-              <X size={20} />
-            </button>
-
+      <Dialog open={!!selectedPhoto} onOpenChange={(open) => !open && setSelectedPhoto(null)}>
+        <DialogContent className="sm:max-w-2xl bg-white border-zinc-200 text-zinc-950 p-0 overflow-hidden">
+          {selectedPhoto && (
             <div className="flex flex-col md:flex-row">
-              <div className="md:w-3/5 bg-black flex items-center justify-center">
+              <div className="md:w-3/5 bg-black flex items-center justify-center min-h-[300px]">
                 <img
                   src={selectedPhoto.url}
                   alt="Full preview"
@@ -290,10 +317,14 @@ export default function GalleryPage() {
                 />
               </div>
               <div className="md:w-2/5 p-6 flex flex-col">
-                <div className="mb-6">
-                  <h3 className="text-sm font-medium text-whisper-gray uppercase tracking-wider mb-1">Guest</h3>
-                  <p className="text-xl font-bold text-deep-shadow">{selectedPhoto.guest_name || "Anonymous"}</p>
-                </div>
+                <DialogHeader className="mb-6">
+                  <DialogTitle className="text-sm font-medium text-whisper-gray uppercase tracking-wider mb-1">
+                    Guest
+                  </DialogTitle>
+                  <p className="text-xl font-bold text-deep-shadow">
+                    {selectedPhoto.guest_name || "Anonymous"}
+                  </p>
+                </DialogHeader>
 
                 <div className="mb-6">
                   <h3 className="text-sm font-medium text-whisper-gray uppercase tracking-wider mb-1">Time</h3>
@@ -334,22 +365,14 @@ export default function GalleryPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Back */}
-      <button
-        onClick={() => router.push(`/admin/events/${eventId}`)}
-        className="flex items-center gap-1.5 text-sm text-whisper-gray hover:text-deep-shadow transition-colors mb-6"
-      >
-        <ArrowLeft size={16} /> Back
-      </button>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Page header */}
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-deep-shadow">
-          {eventName || "Gallery"}
+        <h1 className="text-2xl font-bold text-deep-shadow uppercase">
+          Gallery of {eventName || "Gallery"}
         </h1>
         {tab === "photos" && photos.length > 0 && (
           <button
@@ -401,15 +424,6 @@ export default function GalleryPage() {
               title="Table View"
             >
               <List size={18} />
-            </button>
-            <button
-              onClick={() => setViewMode("byGuest")}
-              className={`p-1.5 rounded-md transition-colors ${
-                viewMode === "byGuest" ? "bg-white shadow-sm text-deep-shadow" : "text-whisper-gray hover:text-deep-shadow"
-              }`}
-              title="Group by Guest"
-            >
-              <Users size={18} />
             </button>
           </div>
         )}
@@ -501,111 +515,153 @@ export default function GalleryPage() {
               <table className="w-full text-left">
                 <thead className="bg-black/[0.02] border-b border-black/5">
                   <tr>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-whisper-gray">Photo</th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-whisper-gray">Photos</th>
                     <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-whisper-gray">Guest</th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-whisper-gray hidden md:table-cell">Caption</th>
-                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-whisper-gray">Time</th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-whisper-gray hidden md:table-cell">Latest Caption</th>
+                    <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-whisper-gray">Earliest Time</th>
                     <th className="px-4 py-3 text-right"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5">
-                  {photos.map((photo) => (
-                    <tr key={photo.id} className="hover:bg-black/[0.01] transition-colors group">
-                      <td className="px-4 py-3">
-                        <div 
-                          className="w-12 h-12 rounded-lg overflow-hidden bg-black/5 cursor-pointer"
-                          onClick={() => setSelectedPhoto(photo)}
+                  {Object.values(groupedByGuest).map((group) => {
+                    const isExpanded = expandedGuests.has(group.sessionId);
+                    const firstPhoto = group.photos[0];
+                    const earliestPhoto = [...group.photos].sort((a, b) => 
+                      new Date(a.taken_at).getTime() - new Date(b.taken_at).getTime()
+                    )[0];
+
+                    return (
+                      <React.Fragment key={group.sessionId}>
+                        {/* Collapsed Row */}
+                        <tr 
+                          className={`hover:bg-black/[0.01] transition-colors group cursor-pointer ${isExpanded ? 'bg-black/[0.02] border-l-4 border-l-amber-400' : ''}`}
+                          onClick={() => toggleGuestExpansion(group.sessionId)}
                         >
-                          <img src={photo.url} className="w-full h-full object-cover" />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm font-semibold text-deep-shadow">{photo.guest_name || "Anonymous"}</span>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <span className="text-sm text-whisper-gray italic">
-                          {photo.caption ? `"${photo.caption}"` : "—"}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs font-mono text-whisper-gray">
-                          {new Date(photo.taken_at).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => photo.url && downloadPhoto(photo.url)}
-                            className="p-1.5 text-whisper-gray hover:text-deep-shadow transition-colors"
-                          >
-                            <Download size={18} />
-                          </button>
-                          <button
-                            onClick={() => handleTrash(photo.id)}
-                            className="p-1.5 text-whisper-gray hover:text-rose-600 transition-colors"
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                          <td className="px-4 py-4">
+                            {!isExpanded ? (
+                              <div className="flex items-center gap-2">
+                                {group.photos.length > 0 ? (
+                                  <>
+                                    <div className="flex -space-x-6">
+                                      {group.photos.slice(0, 2).map((photo, idx) => (
+                                        <div 
+                                          key={photo.id}
+                                          className="w-20 h-20 rounded-xl border-4 border-white overflow-hidden bg-black/5 shadow-md transition-transform group-hover:scale-105"
+                                          style={{ zIndex: 2 - idx }}
+                                        >
+                                          <img src={photo.url} className="w-full h-full object-cover" alt="" />
+                                        </div>
+                                      ))}
+                                    </div>
+                                    {group.photos.length > 2 && (
+                                      <span className="text-xs font-black text-deep-shadow bg-amber-100 border border-amber-200 px-2 py-1 rounded-full ml-1 shadow-sm">
+                                        +{group.photos.length - 2}
+                                      </span>
+                                    )}
+                                  </>
+                                ) : (
+                                  <div className="w-20 h-20 rounded-xl border-2 border-dashed border-black/10 flex items-center justify-center">
+                                    <ImageIcon size={24} className="text-black/10" />
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="w-20 h-20 flex items-center justify-center">
+                                <ChevronDown size={24} className="text-amber-500 animate-bounce-subtle" />
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex flex-col">
+                              <span className="text-base font-black text-deep-shadow group-hover:text-amber-600 transition-colors">
+                                {group.guestName}
+                              </span>
+                              <span className="text-[10px] uppercase tracking-widest text-whisper-gray font-bold">
+                                {group.photos.length} Photo{group.photos.length !== 1 ? 's' : ''}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 hidden md:table-cell">
+                            <span className="text-sm text-whisper-gray italic line-clamp-2 max-w-xs">
+                              {firstPhoto?.caption ? `"${firstPhoto.caption}"` : "—"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-1.5 text-whisper-gray">
+                              <Clock size={14} />
+                              <span className="text-xs font-mono font-bold">
+                                {earliestPhoto ? new Date(earliestPhoto.taken_at).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }) : "—"}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 text-right">
+                            <div className="flex justify-end gap-3" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => downloadAllPhotos(group.photos)}
+                                className="p-2.5 rounded-full hover:bg-black/5 text-whisper-gray hover:text-deep-shadow transition-all"
+                                title="Download All"
+                              >
+                                <Download size={22} />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (confirm(`Delete ALL ${group.photos.length} photos from ${group.guestName}?`)) {
+                                    for (const p of group.photos) await handleTrash(p.id);
+                                  }
+                                }}
+                                className="p-2.5 rounded-full hover:bg-rose-50 text-whisper-gray hover:text-rose-600 transition-all"
+                                title="Delete All"
+                              >
+                                <Trash2 size={22} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+
+                        {/* Expanded Row Content */}
+                        {isExpanded && group.photos.length > 0 && (
+                          <tr className="bg-black/[0.03]">
+                            <td colSpan={5} className="px-8 py-6">
+                              <div className="flex flex-wrap gap-4">
+                                {group.photos.map((photo) => (
+                                  <div key={photo.id} className="flex flex-col gap-2 group/photo">
+                                    <div 
+                                      className="w-32 h-32 rounded-xl overflow-hidden bg-black/10 cursor-pointer shadow-md group-hover/photo:ring-2 group-hover/photo:ring-amber-400 transition-all"
+                                      onClick={() => setSelectedPhoto(photo)}
+                                    >
+                                      <img src={photo.url} className="w-full h-full object-cover" alt="" />
+                                    </div>
+                                    <div className="flex justify-center gap-3">
+                                      <button
+                                        onClick={() => photo.url && downloadPhoto(photo.url)}
+                                        className="p-1.5 bg-white rounded-full shadow-sm text-whisper-gray hover:text-deep-shadow transition-colors border border-black/5"
+                                      >
+                                        <Download size={14} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleTrash(photo.id)}
+                                        className="p-1.5 bg-white rounded-full shadow-sm text-whisper-gray hover:text-rose-600 transition-colors border border-black/5"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
-        ) : (
-          <div className="space-y-12 animate-fade-in">
-            {Object.entries(groupedByGuest).map(([sId, group]) => (
-              <div key={sId} className="space-y-4">
-                <div className="flex items-center gap-3 border-b border-black/5 pb-2">
-                  <div className="w-8 h-8 rounded-full bg-deep-shadow flex items-center justify-center text-white text-xs font-bold">
-                    {group.guestName.charAt(0).toUpperCase()}
-                  </div>
-                  <h2 className="text-lg font-bold text-deep-shadow">{group.guestName}</h2>
-                  <span className="text-xs font-medium text-whisper-gray bg-black/5 px-2 py-0.5 rounded-full">
-                    {group.photos.length} photos
-                  </span>
-                </div>
-
-                {group.photos.length > 0 ? (
-                  <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-2">
-                    {group.photos.map((photo) => (
-                      <div
-                        key={photo.id}
-                        className="relative group aspect-square rounded-lg overflow-hidden bg-black/5 cursor-pointer shadow-sm"
-                        onClick={() => setSelectedPhoto(photo)}
-                      >
-                        <img src={photo.url} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <LayoutGrid size={20} className="text-white" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-whisper-gray italic">No photos taken yet.</p>
-                )}
-
-                {group.messages.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                    {group.messages.map((m) => (
-                      <div key={m.id} className="p-3 bg-misty-gray/20 rounded-lg text-sm text-deep-shadow italic border-l-4 border-deep-shadow/20">
-                        "{m.body}"
-                        <div className="text-[10px] text-whisper-gray mt-1 not-italic font-mono">
-                          {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )
+        ) : null
       ) : messages.length === 0 ? (
         <div className="text-center py-16">
           <MessageSquareHeart
